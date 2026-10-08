@@ -1,0 +1,8 @@
+/* Estilos básicos. Los iremos mejorando clase por clase. */
+body { font-family: system-ui, sans-serif; margin: 2rem; background: #f5f6fa; }
+.pipeline { display: flex; gap: 1rem; flex-wrap: wrap; }
+.estacion { flex: 1 1 150px; min-height: 120px; padding: 1rem; background: #fff; border: 2px solid #333; border-radius: 8px; }
+.estacion h2, .salida h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.salida { display: grid; gap: 1rem; margin-top: 2rem; }
+.salida > div { padding: 1rem; background: #fff; border: 2px solid #333; border-radius: 8px; }
+#salida-codigo { border-color: #2e9d5b; }

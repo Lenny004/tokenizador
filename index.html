@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tokenizador Ternario</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <h1>Tokenizador Ternario</h1>
+
+  <!-- Línea de producción: cada div es una estación del tablero -->
+  <main class="pipeline">
+    <div class="estacion uno"    id="texto-natural"><h2>Texto natural</h2></div>
+    <div class="estacion dos"    id="normalizar"><h2>Normalizar</h2></div>
+    <div class="estacion tres"   id="tokenizador"><h2>Tokenizador ternario</h2></div>
+    <div class="estacion cuatro" id="codificador"><h2>Codificador</h2></div>
+    <div class="estacion cinco"  id="ternario-liquido"><h2>Ternario líquido</h2></div>
+    <div class="estacion seis"   id="prediccion"><h2>Predicción estocástica</h2></div>
+  </main>
+
+  <!-- Panel de salida: texto y código -->
+  <section class="salida">
+    <div id="salida-texto"><h2>Texto</h2></div>
+    <div id="salida-codigo"><h2>Código</h2></div>
+    <div id="errores-js"><h2>Descubrir error de lógica en JS</h2></div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

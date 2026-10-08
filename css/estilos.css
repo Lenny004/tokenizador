@@ -8,3 +8,5 @@ body { font-family: system-ui, sans-serif; margin: 2rem; background: #f5f6fa; }
 #salida-codigo { border-color: #2e9d5b; }
 textarea { width: 100%; box-sizing: border-box; font: inherit; resize: vertical; }
 .resultado { font-family: ui-monospace, monospace; background: #f0f2f7; padding: .5rem; border-radius: 6px; min-height: 1.5rem; word-break: break-word; }
+
+#tokenizador .resultado { list-style: none; margin: 0; }

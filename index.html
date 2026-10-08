@@ -11,8 +11,14 @@
 
   <!-- Línea de producción: cada div es una estación del tablero -->
   <main class="pipeline">
-    <div class="estacion uno"    id="texto-natural"><h2>Texto natural</h2></div>
-    <div class="estacion dos"    id="normalizar"><h2>Normalizar</h2></div>
+    <div class="estacion uno"    id="texto-natural">
+      <h2>Texto natural</h2>
+      <textarea id="entrada" rows="4" placeholder="Escribe una frase...">¡QUIERO   Pupusas de Queso, por favor!!</textarea>
+    </div>
+    <div class="estacion dos"    id="normalizar">
+      <h2>Normalizar</h2>
+      <p class="resultado"></p>
+    </div>
     <div class="estacion tres"   id="tokenizador"><h2>Tokenizador ternario</h2></div>
     <div class="estacion cuatro" id="codificador"><h2>Codificador</h2></div>
     <div class="estacion cinco"  id="ternario-liquido"><h2>Ternario líquido</h2></div>

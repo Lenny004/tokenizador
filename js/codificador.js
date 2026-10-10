@@ -9,20 +9,45 @@
 // "mi" sirve también para "mí", porque la tilde ya se borró.
 // Esta lista es un punto de partida: algunos pronombres sí pueden importar
 // (por ejemplo "mí" en "es para mí"). Se puede ajustar en clase.
-export const PALABRAS_VACIAS = new Set([
-  // Artículos
-  "el", "la", "los", "las", "un", "una", "unos", "unas", "lo",
-  // Preposiciones
+// Cada tipo de palabra vacía tiene su propio arreglo, así es fácil
+// revisar, agregar o quitar palabras de un solo grupo.
+export const ARTICULOS = ["el", "la", "los", "las", "un", "una", "unos", "unas", "lo"];
+
+export const PREPOSICIONES = [
   "a", "ante", "bajo", "con", "contra", "de", "desde", "en", "entre",
   "hacia", "hasta", "para", "por", "segun", "sin", "sobre", "tras",
-  // Conjunciones
-  "y", "e", "o", "u", "ni", "que", "pero", "sino", "porque",
-  // Contracciones (a + el, de + el)
-  "al", "del",
-  // Pronombres y determinantes comunes
-  "me", "te", "se", "le", "les", "nos", "mi", "tu", "su", "sus",
-  "este", "esta", "esto", "ese", "esa", "eso",
-]);
+];
+
+export const CONJUNCIONES = ["y", "e", "o", "u", "ni", "que", "pero", "sino", "porque"];
+
+// a + el = "al", de + el = "del"
+export const CONTRACCIONES = ["al", "del"];
+
+export const PRONOMBRES = ["me", "te", "se", "le", "les", "nos", "mi", "tu", "su", "sus"];
+
+export const DEMOSTRATIVOS = ["este", "esta", "esto", "ese", "esa", "eso"];
+
+// Cada grupo con el nombre que se muestra en el "motivo".
+export const GRUPOS_VACIAS = {
+  "artículo": ARTICULOS,
+  "preposición": PREPOSICIONES,
+  "conjunción": CONJUNCIONES,
+  "contracción": CONTRACCIONES,
+  "pronombre": PRONOMBRES,
+  "demostrativo": DEMOSTRATIVOS,
+};
+
+// PALABRAS_VACIAS junta todos los grupos en un solo Set.
+// Un Set busca al instante (.has), sin recorrer la lista entera.
+export const PALABRAS_VACIAS = new Set(Object.values(GRUPOS_VACIAS).flat());
+
+// Dice a qué grupo pertenece una palabra vacía ("conjunción", etc.).
+export function grupoDe(token) {
+  for (const [grupo, palabras] of Object.entries(GRUPOS_VACIAS)) {
+    if (palabras.includes(token)) return grupo;
+  }
+  return null;
+}
 
 const PESO_BASE = 1;        // palabra con significado
 const CASTIGO_VACIA = 0.2;  // palabra vacía: vale la quinta parte
@@ -50,7 +75,7 @@ export function codificar(fichas) {
 
     if (PALABRAS_VACIAS.has(ficha.token)) {
       peso *= CASTIGO_VACIA;
-      razones.push("palabra vacía");
+      razones.push(`palabra vacía: ${grupoDe(ficha.token)}`);
     }
     if (vistas.has(ficha.token)) {
       peso *= CASTIGO_REPETIDA;

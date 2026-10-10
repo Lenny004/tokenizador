@@ -1,10 +1,12 @@
 // El "director": toma el texto y lo pasa de estación en estación.
 import { normalizar } from "./normalizar.js";
 import { tokenizar } from "./tokenizador.js";
+import { codificar } from "./codificador.js";
 
 const entrada = document.querySelector("#entrada");
 const salidaNormalizar = document.querySelector("#normalizar .resultado");
 const salidaTokens = document.querySelector("#tokenizador .resultado");
+const salidaPesos = document.querySelector("#codificador .resultado");
 
 // Cada vez que escribes algo, el texto recorre la línea de producción.
 function procesar() {
@@ -17,6 +19,15 @@ function procesar() {
     const fila = document.createElement("li");
     fila.textContent = `${f.token}  →  id ${f.id === 0 ? "0 (desconocida)" : f.id}  →  [${f.vector.join(", ")}]`;
     salidaTokens.appendChild(fila);
+  }
+
+  // Estación 4: cada ficha recibe un peso y el motivo de ese peso.
+  const codificadas = codificar(fichas);
+  salidaPesos.replaceChildren();
+  for (const f of codificadas) {
+    const fila = document.createElement("li");
+    fila.textContent = `${f.token} → ${f.peso} (${f.motivo})`;
+    salidaPesos.appendChild(fila);
   }
 }
 

@@ -28,3 +28,7 @@ Todo está en `js/simulador/estaciones.js`, en el objeto `ESTACIONES` (tipo de c
 1. Escribe y exporta la función en `js/codificador.js`.
 2. Impórtala en `estaciones.js`.
 3. Cambia su línea a `codificador: { procesar: codificar, pendiente: false }`.
+
+## Estación 4: Codificador (js/codificador.js)
+
+`codificar(fichas)` le agrega a cada ficha un `peso`, un `motivo` y su `vectorPonderado` (vector × peso). Peso base 1; si es palabra vacía (`PALABRAS_VACIAS`) se multiplica por 0.2; si ya apareció antes en la frase, por 0.5. Ejemplo: el segundo "de" pesa 0.1. Se ve en el tablero y en el simulador (caja Codificador).

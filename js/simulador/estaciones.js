@@ -15,6 +15,7 @@
 // ==================================================================
 import { normalizar } from '../normalizar.js';
 import { tokenizar } from '../tokenizador.js';
+import { codificar } from '../codificador.js';
 
 // Estación que aún no existe: deja pasar el dato sin tocarlo.
 const pasarIgual = (dato) => dato;
@@ -32,8 +33,15 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 4, 5 y 6: pendientes (próxima clase).
-  codificador: { procesar: pasarIgual, pendiente: true },
+  // 4. Le pone un peso a cada ficha (palabras vacías y repetidas pesan menos).
+  codificador: {
+    procesar: (fichas) => {
+      if (!Array.isArray(fichas)) throw new Error('El codificador necesita fichas (¿está conectado después del Tokenizador?)');
+      return codificar(fichas);
+    },
+    pendiente: false,
+  },
+  // 5 y 6: pendientes (próxima clase).
   liquido:     { procesar: pasarIgual, pendiente: true },
   prediccion:  { procesar: pasarIgual, pendiente: true },
   // Caja final: muestra lo último que llegó.
@@ -57,7 +65,8 @@ export function resumen(dato) {
   if (dato === undefined) return '';
   if (typeof dato === 'string') return `"${dato}"`;
   if (Array.isArray(dato) && dato.every((f) => f && 'token' in f)) {
-    return dato.map((f) => `${f.token}#${f.id}`).join(' ');
+    // Si ya tienen peso (pasaron por el codificador), mostramos el peso.
+    return dato.map((f) => ('peso' in f ? `${f.token}·${f.peso}` : `${f.token}#${f.id}`)).join(' ');
   }
   return JSON.stringify(dato);
 }
@@ -68,6 +77,9 @@ export function detalle(dato) {
   if (typeof dato === 'string') return `"${dato}"`;
   if (Array.isArray(dato) && dato.every((f) => f && 'token' in f)) {
     if (dato.length === 0) return '(sin fichas)';
+    if ('peso' in dato[0]) {
+      return dato.map((f) => `${f.token.padEnd(10)} → ${String(f.peso).padEnd(4)} (${f.motivo})\n${''.padEnd(12)}[${f.vectorPonderado.join(', ')}]`).join('\n');
+    }
     return dato.map((f) => `${f.token.padEnd(10)} id ${String(f.id).padStart(2)}  [${f.vector.join(', ')}]`).join('\n');
   }
   return JSON.stringify(dato, null, 2);

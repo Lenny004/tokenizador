@@ -35,6 +35,7 @@ export const PALABRAS_VACIAS = new Set(Object.values(GRUPOS_VACIAS).flat());
  * @returns {string|null} Grupo de la palabra vacía, o `null`.
  */
 export function grupoDe(token) {
+  // Recorre los grupos en orden; devuelve el primero que contiene la palabra.
   for (const [grupo, palabras] of Object.entries(GRUPOS_VACIAS)) {
     if (palabras.includes(token)) return grupo;
   }
@@ -79,22 +80,27 @@ function redondear(n) {
  * @returns {Array<FichaCodificada>} En el mismo orden.
  */
 export function codificar(fichas) {
+  // Palabras ya vistas en esta frase, para castigar repeticiones.
   const vistas = new Set();
 
   return fichas.map((ficha) => {
     let peso = PESO_BASE;
     const razones = [];
 
+    // Regla 1: palabra vacía, ×0.2.
     if (PALABRAS_VACIAS.has(ficha.token)) {
       peso *= CASTIGO_VACIA;
       razones.push(`palabra vacía: ${grupoDe(ficha.token)}`);
     }
+    // Regla 2: repetida, ×0.5 (se acumula: un "de" repetido queda en 0.1).
     if (vistas.has(ficha.token)) {
       peso *= CASTIGO_REPETIDA;
       razones.push("repetida");
     }
+    // Se registra después de revisar, así la primera aparición no cuenta como repetida.
     vistas.add(ficha.token);
 
+    // Objeto nuevo para no modificar las fichas del tokenizador.
     const nueva = {
       ...ficha,
       peso: redondear(peso),

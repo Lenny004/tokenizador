@@ -170,10 +170,12 @@ export class ObjectPool {
     this._cap     = cap;
     this.created  = 0;
     this.reused   = 0;
+    // Crea objetos por adelantado para no reservar memoria durante la animación.
     for (let i = 0; i < initial; i++) { this._free.push(factory()); this.created++; }
   }
   /** @returns {Object} Un objeto libre, o uno nuevo si no hay. */
   acquire() {
+    // Reutiliza uno libre si hay; si no, crea uno nuevo.
     if (this._free.length) { this.reused++; return this._free.pop(); }
     this.created++;
     return this._factory();
@@ -183,6 +185,7 @@ export class ObjectPool {
    * @param {Object} obj
    */
   release(obj) {
+    // Pool lleno: el objeto se descarta y lo recoge el recolector de basura.
     if (this._free.length >= this._cap) return;
     this._reset(obj);
     this._free.push(obj);
@@ -199,6 +202,7 @@ export class SpatialHash {
     this.cell = cell;
     this.buckets = new Map();
   }
+  // Clave numérica de celda (hash con primos grandes); dos celdas podrían coincidir, por eso hitTest revisa el rectángulo.
   _key(cx, cy) { return (cx * 73856093) ^ (cy * 19349663); }
 
   clear() { this.buckets.clear(); }
@@ -209,6 +213,7 @@ export class SpatialHash {
    */
   insert(node) {
     const c = this.cell;
+    // Rango de celdas que cubre el rectángulo del nodo.
     const x0 = Math.floor(node.x / c), x1 = Math.floor((node.x + node.w) / c);
     const y0 = Math.floor(node.y / c), y1 = Math.floor((node.y + node.h) / c);
     for (let cx = x0; cx <= x1; cx++) {
@@ -223,6 +228,7 @@ export class SpatialHash {
 
   /** Nodo que contiene el punto (coords de mundo), o `null`. */
   hitTest(px, py) {
+    // Basta revisar la celda del punto: cada nodo está en todas las celdas que toca.
     const k = this._key(Math.floor(px / this.cell), Math.floor(py / this.cell));
     const b = this.buckets.get(k);
     if (!b) return null;
@@ -240,6 +246,7 @@ export class SpatialHash {
     const c = this.cell;
     const x0 = Math.floor(x / c), x1 = Math.floor((x + w) / c);
     const y0 = Math.floor(y / c), y1 = Math.floor((y + h) / c);
+    // Un nodo puede estar en varias celdas: se evita repetirlo.
     const seen = new Set();
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {
@@ -266,16 +273,20 @@ export const GEO = {
    */
   build(a, b, buffer) {
     const S = CFG.BEZIER_SAMPLES;
+    // Extremos: centro del borde derecho de `a` y del izquierdo de `b`.
     const p0x = a.x + a.w,          p0y = a.y + a.h * 0.5;
     const p3x = b.x,                p3y = b.y + b.h * 0.5;
+    // Puntos de control horizontales: la curva sale y entra de lado, con un mínimo para cajas cercanas.
     const dx  = Math.max(72, Math.abs(p3x - p0x) * 0.46);
     const c1x = p0x + dx, c1y = p0y;
     const c2x = p3x - dx, c2y = p3y;
 
+    // Reutiliza el buffer anterior si sirve, para no crear arreglos en cada cambio.
     const pts = buffer && buffer.length === (S + 1) * 2
       ? buffer
       : new Float32Array((S + 1) * 2);
 
+    // Evalúa la Bézier cúbica (pesos de Bernstein A..D) en S+1 puntos.
     for (let i = 0; i <= S; i++) {
       const t  = i / S, mt = 1 - t;
       const A  = mt * mt * mt, B = 3 * mt * mt * t;
@@ -290,10 +301,12 @@ export const GEO = {
   _p: new Float32Array(2),
   pointAt(geo, t) {
     const S = CFG.BEZIER_SAMPLES;
+    // Ubica el tramo que contiene t y la fracción k dentro de él.
     const f = clamp(t, 0, 1) * S;
     const i = Math.min(S - 1, Math.floor(f));
     const k = f - i;
     const pts = geo.pts;
+    // Interpolación lineal dentro del tramo.
     this._p[0] = pts[i * 2]     + (pts[(i + 1) * 2]     - pts[i * 2])     * k;
     this._p[1] = pts[i * 2 + 1] + (pts[(i + 1) * 2 + 1] - pts[i * 2 + 1]) * k;
     return this._p;

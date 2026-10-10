@@ -174,6 +174,7 @@ export class NeuroFlowApp {
    * @returns {*} `undefined` si no hay.
    */
   _datoDeEntrada(n) {
+    // Revisa las aristas de entrada; usa la primera caja anterior que ya produjo salida.
     for (const eid of this.graph.in.get(n.id) || []) {
       const anterior = this.graph.nodes.get(this.graph.edges.get(eid)?.from);
       if (anterior && anterior.salida !== undefined) return anterior.salida;

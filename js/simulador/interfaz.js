@@ -70,6 +70,7 @@ export class Controller {
     const wy = this.renderer.s2wy(p.y);
     this.moved = false;
 
+    // Prioridad: puerto de salida (conectar), caja (arrastrar), arista (seleccionar), vacío (pan).
     const port = this._portAt(wx, wy);
     if (port && port.port === 'out' && e.button === 0) {
       this.mode = 'connect';
@@ -86,6 +87,7 @@ export class Controller {
 
       // Se arrastra solo este nodo (no hay selección múltiple).
       this.mode = 'drag';
+      // Guarda la posición inicial; el movimiento se calcula como diferencia desde aquí.
       this._pendingDrag = { node, wx, wy, ox: node.x, oy: node.y };
       this.canvas.setPointerCapture(e.pointerId);
       this.canvas.classList.add('grabbing');
@@ -150,16 +152,19 @@ export class Controller {
     if (this.mode === 'drag' && this._pendingDrag) {
       const d = this._pendingDrag;
       const dx = wx - d.wx, dy = wy - d.wy;
+      // Ignora temblores mínimos para que un clic no cuente como arrastre.
       if (!this.moved && Math.hypot(dx, dy) < 0.6) return;
       this.moved = true;
       d.node.x = d.ox + dx;
       d.node.y = d.oy + dy;
+      // Invalida la geometría cacheada de las aristas conectadas.
       this.app.graph._touch();
       this.app.bus.emit(EVT.NODE_MOVED, d.node);
       return;
     }
 
     if (this.mode === 'pan' && this.panStart) {
+      // Pan: el desplazamiento en pantalla se divide entre el zoom para pasarlo a mundo.
       const dx = (p.x - this.panStart.x) / this.app.camera.zoom;
       const dy = (p.y - this.panStart.y) / this.app.camera.zoom;
       this.app.camera.x = this.panStart.cx - dx;
@@ -170,6 +175,7 @@ export class Controller {
 
     if (this.mode === 'connect' && this.connectFrom) {
       const target = r.hitTestNode(wx, wy);
+      // Marca el destino como válido si no es la misma caja ni una conexión repetida.
       const valid = !!(target && target.id !== this.connectFrom.id &&
                        !this.app.graph.hasEdge(this.connectFrom.id, target.id));
       r.setOverlay({ type:'connect', fromId: this.connectFrom.id, sx:p.x, sy:p.y, valid });
@@ -211,6 +217,7 @@ export class Controller {
     this._pendingDrag = null;
     this.panStart = null;
     this.canvas.classList.remove('grabbing', 'connecting');
+    // Puede no haber captura activa (p. ej. tras pointercancel); se ignora.
     try { this.canvas.releasePointerCapture(e.pointerId); } catch (_) {}
   }
 
@@ -230,7 +237,7 @@ export class Controller {
     if (newZoom === cam.zoom) return;
 
     cam.zoom = newZoom;
-    // Mantiene fijo el punto bajo el ratón.
+    // Recalcula el centro para que el punto bajo el ratón no se mueva.
     cam.x = wx - (p.x - this.renderer.W * 0.5) / cam.zoom;
     cam.y = wy - (p.y - this.renderer.H * 0.5) / cam.zoom;
 

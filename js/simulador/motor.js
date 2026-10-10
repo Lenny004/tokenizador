@@ -94,16 +94,20 @@ export class SimulationEngine {
    */
   _fire(node) {
     const count = this.firedCount.get(node.id) || 0;
+    // Límite de disparos por nodo: corta los ciclos infinitos en grafos con bucles.
     if (count >= CFG.MAX_FIRES) return;      // guarda anti-bucle
     this.firedCount.set(node.id, count + 1);
 
+    // Al disparar: brillo al máximo y potencial a cero (se "descarga").
     node.activation = 1;
     node.potential  = 0;
     node.state      = 'firing';
     this.stats.fires++;
 
+    // Aviso para que la app ejecute la estación de este nodo.
     this.bus.emit(EVT.SIM_FIRE, { nodeId: node.id, eventId: node.eventId });
 
+    // Un pulso por arista saliente; la velocidad se ajusta a su largo para que todos se vean a ritmo parecido.
     const outSet = this.graph.out.get(node.id);
     if (!outSet) return;
     for (const eid of outSet) {
@@ -127,6 +131,7 @@ export class SimulationEngine {
    */
   _arrive(pulse) {
     const edge = this.graph.edges.get(pulse.edgeId);
+    // La arista o el destino pudieron borrarse mientras el pulso viajaba.
     if (!edge) return;
     const target = this.graph.nodes.get(edge.to);
     if (!target) return;
@@ -135,11 +140,13 @@ export class SimulationEngine {
     edge.signal = 1;
     edge.flow   = 1;
 
+    // Integra: cada pulso suma el peso de la arista al potencial del destino.
     target.potential += edge.weight;
     target.activation = Math.min(1, target.activation + 0.7);
 
     this.bus.emit(EVT.SIM_SIGNAL, { nodeId: target.id, edgeId: edge.id });
 
+    // Umbral alcanzado: dispara tras el período refractario, no en el mismo fotograma.
     if (target.potential >= target.threshold) {
       target.potential = 0;
       this.fireTimers.push({ nodeId: target.id, at: this.elapsed + CFG.REFRACTORY });
@@ -148,6 +155,7 @@ export class SimulationEngine {
 
   /** Ilumina las cajas conectadas en cascada, por profundidad. */
   illuminate() {
+    // Profundidad de cada nodo (BFS desde las raíces; los demás empiezan en 0).
     const depth = new Map();
     const queue = [];
     for (const n of this.graph.roots()) { depth.set(n.id, 0); queue.push(n); }
@@ -164,6 +172,7 @@ export class SimulationEngine {
       }
     }
 
+    // Agenda el destello por profundidad para que la luz avance en cascada.
     let i = 0;
     for (const n of this.graph.nodes.values()) {
       const deg = (this.graph.in.get(n.id)?.size || 0) + (this.graph.out.get(n.id)?.size || 0);
@@ -190,6 +199,7 @@ export class SimulationEngine {
 
     const running = this.state === SimState.RUNNING;
 
+    // Disparos agendados que ya vencieron (solo se ejecutan en RUNNING); se recorre al revés para usar splice.
     for (let i = this.fireTimers.length - 1; i >= 0; i--) {
       if (this.elapsed >= this.fireTimers[i].at) {
         const t = this.fireTimers[i];
@@ -201,6 +211,7 @@ export class SimulationEngine {
       }
     }
 
+    // Destellos de Iluminar: corren aunque la simulación esté detenida.
     for (let i = this.flashQueue.length - 1; i >= 0; i--) {
       if (this.elapsed >= this.flashQueue[i].at) {
         const n = this.graph.nodes.get(this.flashQueue[i].nodeId);
@@ -209,6 +220,7 @@ export class SimulationEngine {
       }
     }
 
+    // Avanza cada pulso; al llegar (t >= 1) entrega su señal y vuelve al pool.
     if (running) {
       for (let i = this.pulses.length - 1; i >= 0; i--) {
         const p = this.pulses[i];
@@ -221,11 +233,13 @@ export class SimulationEngine {
       }
     }
 
+    // Decaimiento exponencial por vida media: independiente de los FPS.
     const kAct  = Math.pow(0.5, dt / CFG.ACTIVATION_HL);
     const kPot  = Math.pow(0.5, dt / CFG.POTENTIAL_HL);
     const kSig  = Math.pow(0.5, dt / CFG.SIGNAL_HL);
 
     for (const n of this.graph.nodes.values()) {
+      // Bajo un mínimo se fuerza 0 para no arrastrar valores diminutos.
       if (n.activation > 0.001) {
         n.activation *= kAct;
         if (n.activation < 0.002) { n.activation = 0; n.state = 'idle'; }
@@ -236,6 +250,7 @@ export class SimulationEngine {
       if (e.signal > 0.001) e.signal *= kSig; else e.signal = 0;
     }
 
+    // Sin pulsos ni disparos pendientes la red se apagó: vuelve a IDLE.
     if (running && this.pulses.length === 0 && this.fireTimers.length === 0) {
       this.state = SimState.IDLE;
       this.bus.emit(EVT.SIM_STATE, this.state);

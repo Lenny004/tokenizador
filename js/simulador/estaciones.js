@@ -51,7 +51,9 @@ export const ESTACIONES = {
  */
 export function ejecutarEstacion(tipo, dato, entradaUsuario) {
   const estacion = ESTACIONES[tipo];
+  // Tipo sin estación (p. ej. una neurona genérica): el dato pasa igual.
   if (!estacion) return { resultado: dato, pendiente: false, error: null };
+  // Un error de la estación no detiene la simulación: se devuelve el mensaje y el dato sin cambios.
   try {
     return { resultado: estacion.procesar(dato, entradaUsuario), pendiente: estacion.pendiente, error: null };
   } catch (err) {

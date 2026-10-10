@@ -45,10 +45,12 @@ export const idDe = (token) => vocabulario.get(token) ?? DESCONOCIDA;
  * @returns {Array<Ficha>} `[]` si el texto está vacío.
  */
 export function tokenizar(textoLimpio) {
+  // "".split(" ") daría [""], una ficha falsa.
   if (!textoLimpio) return [];
   return textoLimpio.split(" ").map((token) => ({
     token,
     id: idDe(token),
+    // Palabra sin rasgos conocidos: vector neutro.
     vector: tabla[token] ?? [0, 0, 0],
   }));
 }

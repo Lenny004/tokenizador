@@ -13,9 +13,11 @@ const salidaLiquido = document.querySelector("#ternario-liquido .resultado");
 
 /** Procesa `#entrada` por las estaciones 2 a 5 y repinta los resultados. */
 function procesar() {
+  // Estación 2: texto limpio.
   const limpio = normalizar(entrada.value);
   salidaNormalizar.textContent = limpio || "(vacío)";
 
+  // Estación 3: una fila por ficha; replaceChildren borra el resultado anterior.
   const fichas = tokenizar(limpio);
   salidaTokens.replaceChildren();
   for (const f of fichas) {
@@ -24,6 +26,7 @@ function procesar() {
     salidaTokens.appendChild(fila);
   }
 
+  // Estación 4: peso y motivo por ficha.
   const codificadas = codificar(fichas);
   salidaPesos.replaceChildren();
   for (const f of codificadas) {
@@ -32,6 +35,7 @@ function procesar() {
     salidaPesos.appendChild(fila);
   }
 
+  // Estación 5: vector mezclado, estado y rasgo más fuerte; innerText respeta los \n.
   const mezcla = licuar(codificadas);
   const fuerte = rasgoMasFuerte(mezcla.vector);
   salidaLiquido.innerText =

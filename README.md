@@ -65,8 +65,10 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   ├── vectores.js         # base de datos vectorial: pendiente
 │   ├── simulador.js        # arranca el simulador
 │   └── simulador/          # núcleo (EventBus), grafo, motor, dibujo, interfaz, app y registro de estaciones
-└── data/
-    └── ejemplos.json       # preguntas y respuestas de ejemplo (todavía vacío)
+├── data/
+│   └── ejemplos.json       # preguntas y respuestas de ejemplo (todavía vacío)
+└── pruebas/
+    └── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
 ```
 
 <!-- keep -->
@@ -78,6 +80,17 @@ Todo está en `js/simulador/estaciones.js`, en el objeto `ESTACIONES` (tipo de c
 2. Impórtala en `estaciones.js`.
 3. Cambia su línea a `{ procesar: tuFuncion, pendiente: false }`.
 <!-- /keep -->
+
+<!-- section:testing -->
+## ✅ Pruebas
+
+Requiere [Node.js](https://nodejs.org/) para correrlas desde la terminal:
+
+```bash
+node pruebas/pesos-aprendidos.js
+```
+
+`pesos-aprendidos.js` simula vectores ya aprendidos por la red y compara "de" y "pupusas" sin castigo y con el codificador: "de" pasa de `[0.3, -0.1, 0.4]` a `[0.06, -0.02, 0.08]`.
 
 <!-- section:roadmap -->
 ## 🗺️ Hoja de ruta y estado

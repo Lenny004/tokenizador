@@ -42,7 +42,7 @@ Como el proyecto usa módulos de JavaScript (`import`), hay que abrirlo con un s
 1. Abre `index.html` con Live Server.
 2. Escribe una frase en **Texto natural**.
 
-Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido.
+Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno).
 
 Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pulsa **Play** y haz clic en una caja para ver su salida en el panel derecho.
 
@@ -61,14 +61,16 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   ├── normalizar.js       # estación 2: minúsculas, sin tildes ni signos, conserva la ñ
 │   ├── tokenizador.js      # estación 3: vocabulario, IDs y vectores de -1, 0 y +1
 │   ├── codificador.js      # estación 4: pesos, palabras vacías por tipo y repetidas
-│   ├── red.js              # estaciones 5 y 6: pendiente
+│   ├── liquido.js          # estación 5: licúa los vectores ponderados en uno solo (promedio ponderado)
+│   ├── red.js              # estación 6: pendiente
 │   ├── vectores.js         # base de datos vectorial: pendiente
 │   ├── simulador.js        # arranca el simulador
 │   └── simulador/          # núcleo (EventBus), grafo, motor, dibujo, interfaz, app y registro de estaciones
 ├── data/
 │   └── ejemplos.json       # preguntas y respuestas de ejemplo (todavía vacío)
 └── pruebas/
-    └── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
+    ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
+    └── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
 ```
 
 <!-- keep -->
@@ -88,9 +90,12 @@ Requiere [Node.js](https://nodejs.org/) para correrlas desde la terminal:
 
 ```bash
 node pruebas/pesos-aprendidos.js
+node pruebas/liquido.js
 ```
 
 `pesos-aprendidos.js` simula vectores ya aprendidos por la red y compara "de" y "pupusas" sin castigo y con el codificador: "de" pasa de `[0.3, -0.1, 0.4]` a `[0.06, -0.02, 0.08]`.
+
+`liquido.js` revisa la estación 5: "quiero pupusas de queso" da `[0.31, -0.31, 0.63]` (ok, rasgo más fuerte: desayuno), "de y de" da `[0, 0, 0]` (sin significado) y una frase vacía da `[0, 0, 0]` (vacío), sin `NaN`.
 
 <!-- section:roadmap -->
 ## 🗺️ Hoja de ruta y estado
@@ -99,7 +104,7 @@ node pruebas/pesos-aprendidos.js
 - [x] Estación 3: tokenizador ternario
 - [x] Estación 4: codificador
 - [x] Simulador visual conectado a las estaciones
-- [ ] Estación 5: ternario líquido
+- [x] Estación 5: ternario líquido
 - [ ] Estación 6: red neuronal con softmax, temperatura y predicción token a token
 - [ ] Base de datos vectorial (10 formas de cada pregunta y de cada respuesta)
 - [ ] Salida de texto y código, y detector de errores de lógica en JS

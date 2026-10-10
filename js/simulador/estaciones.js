@@ -16,6 +16,7 @@
 import { normalizar } from '../normalizar.js';
 import { tokenizar } from '../tokenizador.js';
 import { codificar } from '../codificador.js';
+import { licuar, rasgoMasFuerte } from '../liquido.js';
 
 // Estación que aún no existe: deja pasar el dato sin tocarlo.
 const pasarIgual = (dato) => dato;
@@ -41,8 +42,15 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 5 y 6: pendientes (próxima clase).
-  liquido:     { procesar: pasarIgual, pendiente: true },
+  // 5. Licúa todos los vectores ponderados en uno solo (promedio ponderado).
+  liquido: {
+    procesar: (fichas) => {
+      if (!Array.isArray(fichas)) throw new Error('El ternario líquido necesita fichas (¿está conectado después del Codificador?)');
+      return licuar(fichas);
+    },
+    pendiente: false,
+  },
+  // 6. Pendiente (próxima clase): deja pasar la mezcla sin cambios.
   prediccion:  { procesar: pasarIgual, pendiente: true },
   // Caja final: muestra lo último que llegó.
   salida:      { procesar: pasarIgual, pendiente: false },
@@ -68,8 +76,12 @@ export function resumen(dato) {
     // Si ya tienen peso (pasaron por el codificador), mostramos el peso.
     return dato.map((f) => ('peso' in f ? `${f.token}·${f.peso}` : `${f.token}#${f.id}`)).join(' ');
   }
+  if (esMezcla(dato)) return `[${dato.vector.join(', ')}] · ${dato.estado}`;
   return JSON.stringify(dato);
 }
+
+// ¿Es el resultado del ternario líquido? ({ vector, estado, ... })
+const esMezcla = (dato) => dato && Array.isArray(dato.vector) && 'estado' in dato;
 
 // Versión larga para el inspector (una ficha por línea).
 export function detalle(dato) {
@@ -81,6 +93,14 @@ export function detalle(dato) {
       return dato.map((f) => `${f.token.padEnd(10)} → ${String(f.peso).padEnd(4)} (${f.motivo})\n${''.padEnd(12)}[${f.vectorPonderado.join(', ')}]`).join('\n');
     }
     return dato.map((f) => `${f.token.padEnd(10)} id ${String(f.id).padStart(2)}  [${f.vector.join(', ')}]`).join('\n');
+  }
+  if (esMezcla(dato)) {
+    const fuerte = rasgoMasFuerte(dato.vector);
+    return `vector     [${dato.vector.join(', ')}]\n` +
+           `estado     ${dato.estado}\n` +
+           `nota       ${dato.nota}\n` +
+           `peso total ${dato.pesoTotal}\n` +
+           `más fuerte ${fuerte.rasgo} (${fuerte.valor})`;
   }
   return JSON.stringify(dato, null, 2);
 }

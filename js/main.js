@@ -2,11 +2,13 @@
 import { normalizar } from "./normalizar.js";
 import { tokenizar } from "./tokenizador.js";
 import { codificar } from "./codificador.js";
+import { licuar, rasgoMasFuerte } from "./liquido.js";
 
 const entrada = document.querySelector("#entrada");
 const salidaNormalizar = document.querySelector("#normalizar .resultado");
 const salidaTokens = document.querySelector("#tokenizador .resultado");
 const salidaPesos = document.querySelector("#codificador .resultado");
+const salidaLiquido = document.querySelector("#ternario-liquido .resultado");
 
 // Cada vez que escribes algo, el texto recorre la línea de producción.
 function procesar() {
@@ -29,6 +31,14 @@ function procesar() {
     fila.textContent = `${f.token} → ${f.peso} (${f.motivo})`;
     salidaPesos.appendChild(fila);
   }
+
+  // Estación 5: todos los vectores se licúan en uno solo.
+  const mezcla = licuar(codificadas);
+  const fuerte = rasgoMasFuerte(mezcla.vector);
+  salidaLiquido.innerText =
+    `[${mezcla.vector.join(", ")}]\n` +
+    `${mezcla.estado}: ${mezcla.nota}\n` +
+    `Rasgo más fuerte: ${fuerte.rasgo} (${fuerte.valor})`;
 }
 
 entrada.addEventListener("input", procesar);

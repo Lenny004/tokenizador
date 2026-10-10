@@ -14,7 +14,7 @@ export const NODE_TYPES = Object.freeze({
   normalizar:  { label:'Normalizar',             color:'#38bdf8', glow:'56,189,248',  threshold:1, icon:'🧹', desc:'Estación 2' },
   tokenizador: { label:'Tokenizador ternario',   color:'#22d3ee', glow:'34,211,238',  threshold:1, icon:'✂', desc:'Estación 3' },
   codificador: { label:'Codificador',            color:'#a78bfa', glow:'167,139,250', threshold:1, icon:'⚖', desc:'Estación 4' },
-  liquido:     { label:'Ternario líquido',       color:'#64748b', glow:'100,116,139', threshold:1, icon:'⏳', desc:'Estación 5 · pendiente' },
+  liquido:     { label:'Ternario líquido',       color:'#2dd4bf', glow:'45,212,191',  threshold:1, icon:'🫗', desc:'Estación 5' },
   prediccion:  { label:'Predicción estocástica', color:'#64748b', glow:'100,116,139', threshold:1, icon:'⏳', desc:'Estación 6 · pendiente' },
   salida:      { label:'Salida',                 color:'#f472b6', glow:'244,114,182', threshold:1, icon:'📤', desc:'Resultado final' },
 });

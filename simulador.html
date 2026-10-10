@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Simulador · Tokenizador Ternario</title>
+<link rel="stylesheet" href="css/simulador.css" />
+</head>
+<body>
+
+<div id="app">
+  <!-- ================= TOOLBAR ================= -->
+  <header class="toolbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1>Neuro<span>Flow</span></h1>
+        <small>Tokenizador ternario</small>
+      </div>
+    </div>
+
+    <button class="tbtn primary" id="btn-play" title="Ejecutar simulación (Espacio)">
+      <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="currentColor" stroke="none"/></svg>
+      Play
+    </button>
+    <button class="tbtn" id="btn-pause" title="Pausar" disabled>
+      <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" fill="currentColor" stroke="none"/></svg>
+      Pausa
+    </button>
+    <button class="tbtn" id="btn-stop" title="Detener">
+      <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none"/></svg>
+      Stop
+    </button>
+
+    <div class="sep"></div>
+
+    <button class="tbtn" id="btn-add" title="Añadir neurona">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Neurona
+    </button>
+    <button class="tbtn" id="btn-illuminate" title="Iluminar todas las cajas conectadas">
+      <svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg>
+      Iluminar
+    </button>
+
+    <div class="sep"></div>
+
+    <button class="tbtn ghost" id="btn-fit" title="Encuadrar todo">
+      <svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+      Encuadrar
+    </button>
+    <button class="tbtn ghost" id="btn-grid" title="Alternar rejilla">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+      Rejilla
+    </button>
+
+    <!-- Texto que entra a la estación 1 (Texto natural) -->
+    <input class="entrada-sim" id="entrada-sim" type="text" value="¡QUIERO   Pupusas de Queso y de frijol!" title="Texto de entrada" />
+    <a class="enlace" href="index.html">← Tablero</a>
+
+    <div class="spacer"></div>
+
+    <div class="stat-chip"><span class="led" id="led-sim"></span>SIM <b id="stat-state">IDLE</b></div>
+    <div class="stat-chip">N <b id="stat-nodes">0</b></div>
+    <div class="stat-chip">E <b id="stat-edges">0</b></div>
+    <div class="stat-chip">⚡ <b id="stat-pulses">0</b></div>
+  </header>
+
+  <!-- ================= STAGE ================= -->
+  <main class="stage-wrap">
+    <canvas id="stage"></canvas>
+
+    <div class="hud">
+      <div class="hud-card">
+        <h4>🏭 Línea de producción</h4>
+        Escribe una frase arriba y pulsa <b>Play</b>: el pulso recorre las estaciones
+        y cada una calcula su paso real. Haz clic en una caja para ver su salida.
+      </div>
+      <div class="hud-card">
+        <h4>🧠 Interacción</h4>
+        Arrastra cajas · Tira desde el <b>puerto derecho</b> para conectar ·
+        Doble clic para editar · Rueda = zoom · Espacio = Play
+      </div>
+    </div>
+
+    <div class="fps-badge">FPS <b id="stat-fps">60</b></div>
+  </main>
+
+  <!-- ================= INSPECTOR ================= -->
+  <aside class="inspector" id="inspector"></aside>
+</div>
+
+<div id="toasts"></div>
+
+<script type="module" src="js/simulador.js"></script>
+</body>
+</html>

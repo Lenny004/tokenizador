@@ -1,4 +1,4 @@
-// Fachada del simulador: crea todas las piezas y las conecta por el EventBus.
+// Arma el simulador: crea las piezas y las conecta por el EventBus.
 import { CFG, EVT, EventBus, clamp, now } from './nucleo.js';
 import { NodeFactory, GraphModel } from './grafo.js';
 import { SimState, SimulationEngine } from './motor.js';
@@ -9,36 +9,23 @@ import { ejecutarEstacion } from './estaciones.js';
 // Tipos genéricos que agrega el botón "Neurona" (no son estaciones).
 const TIPOS_GENERICOS = ['neuron', 'logic', 'memory', 'action'];
 
-/* ==================================================================
-   11 · APP  (Facade — orquesta todo)
-   ================================================================== */
-/**
- * Crea y conecta todas las piezas del simulador, arma la escena de las estaciones
- * y arranca el bucle de dibujo con `requestAnimationFrame` (no se detiene nunca).
- * Necesita en la página: `#stage`, `#toasts`, `#inspector`, `#entrada-sim`, los botones
- * `#btn-play`, `#btn-pause`, `#btn-stop`, `#btn-add`, `#btn-illuminate`, `#btn-fit`, `#btn-grid`
- * y los indicadores `#stat-state`, `#stat-nodes`, `#stat-edges`, `#stat-pulses`, `#stat-fps`, `#led-sim`.
- */
+/** Crea las piezas, arma la escena y arranca el bucle de dibujo (rAF). */
 export class NeuroFlowApp {
   constructor() {
     this.bus = new EventBus();
 
-    // --- Núcleo ---
     this.graph   = new GraphModel(this.bus);
     this.engine  = new SimulationEngine(this.graph, this.bus);
     this.camera  = { x: 0, y: 0, zoom: 1 };
 
-    // --- Render ---
     this.canvas   = document.getElementById('stage');
     this.renderer = new Renderer(this.canvas, this.graph, this.engine, this.camera, this.bus);
     this.controller = new Controller(this.canvas, this);
 
-    // --- UI ---
     this.toasts    = new ToastManager(document.getElementById('toasts'), this.bus);
     this.inspector = new Inspector(document.getElementById('inspector'), this);
     this.selection = null;
 
-    // --- Métricas ---
     this._fpsAcc = 0; this._fpsFrames = 0; this._fps = 60;
     this._hudAcc = 0;
     this._lastT = now();
@@ -55,7 +42,6 @@ export class NeuroFlowApp {
     this._loop();
   }
 
-  /* ---------- DOM ---------- */
   _cacheDom() {
     this.dom = {
       play:   document.getElementById('btn-play'),
@@ -75,7 +61,7 @@ export class NeuroFlowApp {
     };
   }
 
-  /** Registra los clics de la barra de herramientas (Play/continuar, Pausa, Stop, Neurona, Iluminar, Encuadrar, Rejilla). */
+  /** Registra los botones de la barra. */
   _wireToolbar() {
     const d = this.dom;
 
@@ -87,7 +73,6 @@ export class NeuroFlowApp {
     d.stop.addEventListener('click', () => this.engine.stop());
 
     d.add.addEventListener('click', () => {
-      // Aparece en el centro del viewport, con leve dispersión
       const cx = this.camera.x + (Math.random() - 0.5) * 120;
       const cy = this.camera.y + (Math.random() - 0.5) * 120;
       const type = TIPOS_GENERICOS[Math.floor(Math.random() * TIPOS_GENERICOS.length)];
@@ -107,10 +92,7 @@ export class NeuroFlowApp {
     });
   }
 
-  /**
-   * Atajos de teclado (ignorados mientras se escribe en input, select o textarea):
-   * Espacio = Play/Pausa, Supr/Retroceso = borrar selección, Esc = deseleccionar, F = encuadrar.
-   */
+  /** Atajos: Espacio, Supr/Retroceso, Esc y F (no actúan mientras se escribe). */
   _wireKeyboard() {
     window.addEventListener('keydown', (e) => {
       const tag = (e.target.tagName || '').toLowerCase();
@@ -134,7 +116,7 @@ export class NeuroFlowApp {
     });
   }
 
-  /** Redimensiona el canvas 60 ms después del último `resize` de la ventana o del contenedor. */
+  /** Redimensiona 60 ms después del último cambio de tamaño. */
   _wireResize() {
     let t = 0;
     const doResize = () => { clearTimeout(t); t = setTimeout(() => this.resize(), 60); };
@@ -149,10 +131,7 @@ export class NeuroFlowApp {
     this.renderer._gridDirty = true;
   }
 
-  /**
-   * Suscripciones al EventBus: actualizar la barra con `SIM_STATE` y `GRAPH_CHANGED`,
-   * reiniciar la simulación si el grafo cambia mientras corre y ejecutar la estación en `SIM_FIRE`.
-   */
+  /** Suscripciones al EventBus que actualizan la UI y ejecutan estaciones. */
   _wireBusObservers() {
     this.bus.on(EVT.SIM_STATE, (state) => {
       const running = state === SimState.RUNNING;
@@ -171,11 +150,7 @@ export class NeuroFlowApp {
       this.dom.edges.textContent = this.graph.edgeCount;
     });
 
-    // ★ AQUÍ SE UNE EL SIMULADOR CON EL TOKENIZADOR ★
-    // Cada vez que una caja "dispara", calculamos su paso real:
-    //   1. Buscamos el dato que dejó la caja anterior (la que le mandó el pulso).
-    //   2. Le pedimos al registro de estaciones que lo procese.
-    //   3. Guardamos el resultado en la caja y avisamos con NODE_OUTPUT.
+    // Al disparar, la caja procesa la salida de la anterior y avisa con NODE_OUTPUT.
     this.bus.on(EVT.SIM_FIRE, ({ nodeId }) => {
       const n = this.graph.nodes.get(nodeId);
       if (!n) return;
@@ -187,16 +162,16 @@ export class NeuroFlowApp {
       this.bus.emit(EVT.NODE_OUTPUT, n);
     });
 
-    // Si el grafo cambia durante una simulación, la reiniciamos limpio
+    // Si el grafo cambia mientras corre, se reinicia.
     this.bus.on(EVT.GRAPH_CHANGED, () => {
       if (this.engine.state === SimState.RUNNING) this.engine.reset();
     });
   }
 
   /**
-   * Dato que llega a una caja: la salida de la primera caja anterior que ya tenga resultado.
-   * @param {Object} n - Nodo destino.
-   * @returns {*} Esa salida, o `undefined` si no hay ninguna (por ejemplo en la caja raíz).
+   * Salida de la primera caja anterior que ya tenga resultado.
+   * @param {Object} n
+   * @returns {*} `undefined` si no hay.
    */
   _datoDeEntrada(n) {
     for (const eid of this.graph.in.get(n.id) || []) {
@@ -215,7 +190,7 @@ export class NeuroFlowApp {
     this.bus.emit(EVT.SELECTION, sel);
   }
 
-  /** Centra la cámara y ajusta el zoom (máximo 1.5) para ver todas las cajas; emite `CAMERA`. */
+  /** Encuadra todas las cajas (zoom máx. 1.5). */
   fitView() {
     if (this.graph.nodeCount === 0) {
       this.camera.x = 0; this.camera.y = 0; this.camera.zoom = 1;
@@ -238,9 +213,8 @@ export class NeuroFlowApp {
     this.bus.emit(EVT.CAMERA, this.camera);
   }
 
-  /** Crea las 6 estaciones y la caja Salida en fila, de izquierda a derecha, conectadas en orden. */
+  /** Crea las 6 estaciones y Salida en fila, conectadas en orden. */
   _bootstrapScene() {
-    // Orden de la línea de producción (izquierda → derecha).
     const orden = ['texto', 'normalizar', 'tokenizador', 'codificador', 'liquido', 'prediccion', 'salida'];
     const PASO_X = CFG.NODE_W + 80;
     let anterior = null;
@@ -254,23 +228,18 @@ export class NeuroFlowApp {
     this.dom.edges.textContent = this.graph.edgeCount;
   }
 
-  /* ================================================================
-     BUCLE PRINCIPAL — rAF + delta-time + culling de frames
-     ================================================================ */
-  /** Bucle principal (rAF): avanza la simulación, dibuja y actualiza FPS y contadores cada 0.5 s / 0.15 s. */
+  /** Bucle principal: simula, dibuja y refresca contadores. */
   _loop() {
     const t = now();
     let dt = t - this._lastT;
     this._lastT = t;
     dt = Math.min(dt, 0.05);      // clamp anti-salto
 
-    // 1) Simulación
     this.engine.update(dt);
 
-    // 2) Render
     this.renderer.render(dt);
 
-    // 3) HUD (throttled a 6 Hz → no castiga el frame)
+    // Contadores a ~6 Hz para no recargar cada fotograma.
     this._fpsAcc += dt; this._fpsFrames++;
     if (this._fpsAcc >= 0.5) {
       this._fps = this._fpsFrames / this._fpsAcc;
@@ -289,7 +258,6 @@ export class NeuroFlowApp {
     this._raf = requestAnimationFrame(() => this._loop());
   }
 
-  /* ---------- API pública de hit-test para el Controller ---------- */
   hitTestNode(wx, wy) { return this.renderer.hitTestNode(wx, wy); }
 }
 

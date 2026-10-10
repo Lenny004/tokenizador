@@ -1,38 +1,22 @@
-// ==================================================================
-// REGISTRO DE ESTACIONES
-// ------------------------------------------------------------------
-// Aquí se decide QUÉ HACE cada caja cuando el pulso la dispara.
-// Es un objeto sencillo:  tipoDeEstacion -> { procesar, pendiente }
-//   - procesar(dato, entradaUsuario) recibe lo que dejó la estación
-//     anterior y devuelve el resultado de este paso.
-//   - pendiente: true si la estación todavía no está construida.
-//
-// Para conectar una estación nueva (por ejemplo el codificador):
-//   1. Escribe la función en js/codificador.js y expórtala.
-//   2. Impórtala aquí arriba.
-//   3. Cambia su entrada en ESTACIONES: procesar: codificar, pendiente: false.
-// ¡Nada más! El simulador la usará automáticamente.
-// ==================================================================
+// Registro de estaciones: tipo de caja -> { procesar, pendiente }.
 import { normalizar } from '../normalizar.js';
 import { tokenizar } from '../tokenizador.js';
 import { codificar } from '../codificador.js';
 import { licuar, rasgoMasFuerte } from '../liquido.js';
 
-// Estación que aún no existe: deja pasar el dato sin tocarlo.
+// Para estaciones sin implementar: devuelve el dato igual.
 const pasarIgual = (dato) => dato;
 
 /**
  * @typedef {Object} Estacion
- * @property {function(*, string): *} procesar - Recibe `(dato, entradaUsuario)` y devuelve el resultado; puede lanzar Error.
- * @property {boolean} pendiente - `true` si la estación todavía no está implementada.
+ * @property {function(*, string): *} procesar - `(dato, entradaUsuario) => resultado`; puede lanzar Error.
+ * @property {boolean} pendiente - Sin implementar.
  */
 /** @type {Object<string, Estacion>} */
 export const ESTACIONES = {
-  // 1. La primera caja no recibe nada: toma el texto del cuadro de entrada.
+  // La primera caja no recibe dato: usa el texto del campo de entrada.
   texto:       { procesar: (_dato, entradaUsuario) => entradaUsuario, pendiente: false },
-  // 2. Deja el texto limpio (minúsculas, sin tildes ni signos).
   normalizar:  { procesar: (texto) => normalizar(String(texto ?? '')), pendiente: false },
-  // 3. Parte el texto en fichas { token, id, vector }.
   tokenizador: {
     procesar: (texto) => {
       if (typeof texto !== 'string') throw new Error('El tokenizador necesita texto (¿está conectado después de Normalizar?)');
@@ -40,7 +24,6 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 4. Le pone un peso a cada ficha (palabras vacías y repetidas pesan menos).
   codificador: {
     procesar: (fichas) => {
       if (!Array.isArray(fichas)) throw new Error('El codificador necesita fichas (¿está conectado después del Tokenizador?)');
@@ -48,7 +31,6 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 5. Licúa todos los vectores ponderados en uno solo (promedio ponderado).
   liquido: {
     procesar: (fichas) => {
       if (!Array.isArray(fichas)) throw new Error('El ternario líquido necesita fichas (¿está conectado después del Codificador?)');
@@ -56,20 +38,15 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 6. En desarrollo: deja pasar la mezcla sin cambios.
   prediccion:  { procesar: pasarIgual, pendiente: true },
-  // Caja final: muestra lo último que llegó.
   salida:      { procesar: pasarIgual, pendiente: false },
 };
 
 /**
- * Ejecuta la estación de una caja. Si el tipo no está en el registro
- * (por ejemplo una "Neurona" genérica), el dato pasa igual.
- * Los errores de la estación se capturan: el dato pasa sin cambios y se devuelve el mensaje.
- *
- * @param {string} tipo - Tipo de la caja (clave de `ESTACIONES`).
- * @param {*} dato - Salida de la caja anterior (`undefined` en la primera).
- * @param {string} entradaUsuario - Texto del campo `#entrada-sim`.
+ * Ejecuta la estación; tipos sin registro o con error devuelven el dato igual.
+ * @param {string} tipo
+ * @param {*} dato - Salida de la caja anterior.
+ * @param {string} entradaUsuario - Texto de `#entrada-sim`.
  * @returns {{resultado: *, pendiente: boolean, error: string|null}}
  */
 export function ejecutarEstacion(tipo, dato, entradaUsuario) {
@@ -83,27 +60,26 @@ export function ejecutarEstacion(tipo, dato, entradaUsuario) {
 }
 
 /**
- * Convierte un resultado en texto corto para dibujarlo debajo de la caja.
- * @param {*} dato - Texto, fichas, mezcla del ternario líquido u otro valor.
+ * Texto corto para mostrar bajo la caja.
+ * @param {*} dato
  * @returns {string} `''` si no hay dato.
  */
 export function resumen(dato) {
   if (dato === undefined) return '';
   if (typeof dato === 'string') return `"${dato}"`;
   if (Array.isArray(dato) && dato.every((f) => f && 'token' in f)) {
-    // Si ya tienen peso (pasaron por el codificador), mostramos el peso.
     return dato.map((f) => ('peso' in f ? `${f.token}·${f.peso}` : `${f.token}#${f.id}`)).join(' ');
   }
   if (esMezcla(dato)) return `[${dato.vector.join(', ')}] · ${dato.estado}`;
   return JSON.stringify(dato);
 }
 
-// ¿Es el resultado del ternario líquido? ({ vector, estado, ... })
+// Detecta la salida del ternario líquido.
 const esMezcla = (dato) => dato && Array.isArray(dato.vector) && 'estado' in dato;
 
 /**
- * Versión larga para el inspector (una ficha por línea).
- * @param {*} dato - Texto, fichas, fichas codificadas, mezcla u otro valor (se muestra como JSON).
+ * Texto largo para el inspector.
+ * @param {*} dato
  * @returns {string}
  */
 export function detalle(dato) {

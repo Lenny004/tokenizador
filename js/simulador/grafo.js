@@ -1,20 +1,13 @@
 import { CFG, EVT, uid } from './nucleo.js';
 
-/* ==================================================================
-   4 · NODE FACTORY  (patrón Factory + Strategy de render)
-   ================================================================== */
-/**
- * Tipos de caja: etiqueta, colores (`glow` es "r,g,b" para usar en rgba), umbral de
- * disparo, icono y descripción. Las claves de las estaciones (`texto`, `normalizar`, ...)
- * coinciden con las de `ESTACIONES` en estaciones.js.
- */
+/** Tipos de caja; `glow` es "r,g,b" para rgba(). */
 export const NODE_TYPES = Object.freeze({
   trigger: { label:'Trigger',  color:'#4ade80', glow:'74,222,128',  threshold:0, icon:'⚡', desc:'Fuente / entrada' },
   neuron:  { label:'Neurona',  color:'#38bdf8', glow:'56,189,248',  threshold:1, icon:'🧠', desc:'Procesa 1 señal' },
   logic:   { label:'Lógica',   color:'#fbbf24', glow:'251,191,36',  threshold:2, icon:'⚙', desc:'Requiere 2 señales' },
   action:  { label:'Acción',   color:'#f472b6', glow:'244,114,182', threshold:1, icon:'▶', desc:'Salida / efecto' },
   memory:  { label:'Memoria',  color:'#a78bfa', glow:'167,139,250', threshold:1, icon:'💾', desc:'Persiste estado' },
-  // --- Estaciones del tokenizador (la clave coincide con el registro de estaciones.js) ---
+  // Estaciones: las claves coinciden con ESTACIONES (estaciones.js).
   texto:       { label:'Texto natural',          color:'#4ade80', glow:'74,222,128',  threshold:0, icon:'✍', desc:'Estación 1 · entrada' },
   normalizar:  { label:'Normalizar',             color:'#38bdf8', glow:'56,189,248',  threshold:1, icon:'🧹', desc:'Estación 2' },
   tokenizador: { label:'Tokenizador ternario',   color:'#22d3ee', glow:'34,211,238',  threshold:1, icon:'✂', desc:'Estación 3' },
@@ -26,12 +19,12 @@ export const NODE_TYPES = Object.freeze({
 
 export class NodeFactory {
   /**
-   * Crea un nodo nuevo (no lo agrega al grafo).
-   * @param {string} type - Clave de `NODE_TYPES`; si no existe se usan los datos de `neuron`.
+   * Crea un nodo sin agregarlo al grafo.
+   * @param {string} type - Clave de `NODE_TYPES` (por defecto `neuron`).
    * @param {number} x
-   * @param {number} y - Esquina superior izquierda en píxeles de mundo.
+   * @param {number} y - Esquina superior izquierda (px de mundo).
    * @param {{label?: string, threshold?: number, weight?: number}} [overrides]
-   * @returns {Object} Nodo con `id` y `eventId` únicos, datos del tipo y estado de ejecución en cero.
+   * @returns {Object}
    */
   static create(type, x, y, overrides = {}) {
     const preset = NODE_TYPES[type] || NODE_TYPES.neuron;
@@ -49,11 +42,11 @@ export class NodeFactory {
       h: CFG.NODE_H,
       threshold: overrides.threshold ?? preset.threshold,
       weight:    overrides.weight ?? 1,
-      // --- runtime state (no serializable) ---
+      // Estado de ejecución.
       activation: 0,     // 0..1 brillo actual
       potential:  0,     // acumulador neuromórfico
       state:      'idle',
-      // --- resultado real de la estación (se llena al disparar) ---
+      // Resultado de la estación (se llena al disparar).
       salida:     undefined,
       pendiente:  false,
       error:      null,
@@ -62,17 +55,13 @@ export class NodeFactory {
   }
   /**
    * @param {string} type
-   * @returns {Object} Datos del tipo, o los de `neuron` si no existe.
+   * @returns {Object} Datos del tipo (o de `neuron`).
    */
   static preset(type) { return NODE_TYPES[type] || NODE_TYPES.neuron; }
 }
 
-/* ==================================================================
-   5 · GRAPH MODEL  (estructura de datos + listas de adyacencia)
-   ================================================================== */
 /**
- * Guarda nodos y aristas, con listas de adyacencia por nodo, y emite eventos en cada cambio.
- * `geometryVersion` aumenta con cada cambio para invalidar la geometría cacheada de las aristas.
+ * Nodos, aristas y adyacencias; emite eventos en cada cambio.
  * @param {EventBus} bus
  */
 export class GraphModel {
@@ -85,11 +74,10 @@ export class GraphModel {
     this.geometryVersion = 0;
   }
 
-  /* ---------- NODOS ---------- */
   /**
    * Agrega el nodo y emite `NODE_ADDED` y `GRAPH_CHANGED`.
    * @param {Object} node
-   * @returns {Object} El mismo nodo.
+   * @returns {Object}
    */
   addNode(node) {
     this.nodes.set(node.id, node);
@@ -108,7 +96,7 @@ export class GraphModel {
    */
   removeNode(id) {
     if (!this.nodes.has(id)) return false;
-    // Elimina aristas huérfanas (evita redundancia / memory leaks)
+    // Quita también sus aristas para no dejarlas huérfanas.
     for (const eid of Array.from(this.out.get(id))) this.removeEdge(eid);
     for (const eid of Array.from(this.in.get(id)))  this.removeEdge(eid);
     const node = this.nodes.get(id);
@@ -121,13 +109,12 @@ export class GraphModel {
     return true;
   }
 
-  /* ---------- ARISTAS ---------- */
   /**
    * Conecta dos nodos y emite `EDGE_ADDED` y `GRAPH_CHANGED`.
    * @param {string} fromId
    * @param {string} toId
-   * @param {number} [weight=1] - Potencial que suma al nodo destino cada pulso.
-   * @returns {Object|null} La arista, o `null` si es un auto-lazo, un duplicado o falta algún nodo.
+   * @param {number} [weight=1] - Potencial que suma cada pulso.
+   * @returns {Object|null} `null` si es auto-lazo, duplicada o falta un nodo.
    */
   addEdge(fromId, toId, weight = 1) {
     if (fromId === toId) return null;                  // sin auto-lazos
@@ -176,7 +163,7 @@ export class GraphModel {
     return false;
   }
 
-  /** Nodos raíz = sin entradas (fuentes de la señal). */
+  /** Nodos sin entradas. */
   roots() {
     const out = [];
     for (const [id, set] of this.in) if (set.size === 0) out.push(this.nodes.get(id));
@@ -186,7 +173,7 @@ export class GraphModel {
   get nodeCount() { return this.nodes.size; }
   get edgeCount() { return this.edges.size; }
 
-  /** Elimina todas las aristas y nodos (emitiendo los eventos de cada uno). */
+  /** Elimina todo, emitiendo los eventos de cada elemento. */
   clear() {
     for (const id of Array.from(this.edges.keys())) this.removeEdge(id);
     for (const id of Array.from(this.nodes.keys())) this.removeNode(id);

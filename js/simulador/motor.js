@@ -1,20 +1,10 @@
 import { CFG, EVT, ObjectPool, GEO } from './nucleo.js';
 
-/* ==================================================================
-   7 · SIMULATION ENGINE  (State Machine + scheduler determinista)
-   ------------------------------------------------------------------
-   Estados: IDLE → RUNNING ⇄ PAUSED → IDLE
-   Modelo neuromórfico:
-     · Cada nodo acumula POTENCIAL de sus entradas.
-     · Al superar el UMBRAL → dispara (fire) tras un REFRACTARIO.
-     · Cada disparo emite un pulso por CADA arista saliente (ramificación).
-     · El potencial y la activación decaen exponencialmente.
-   ================================================================== */
+// Motor de simulación: estados IDLE → RUNNING ⇄ PAUSED; los nodos acumulan potencial y disparan al llegar al umbral.
 export const SimState = Object.freeze({ IDLE:'IDLE', RUNNING:'RUNNING', PAUSED:'PAUSED' });
 
 /**
- * Mueve la simulación: dispara nodos, avanza pulsos y aplica decaimientos.
- * No tiene bucle propio: `NeuroFlowApp` llama a `update(dt)` en cada fotograma.
+ * Avanza pulsos, disparos y decaimientos; `update(dt)` se llama en cada fotograma.
  * @param {GraphModel} graph
  * @param {EventBus} bus
  */
@@ -39,18 +29,13 @@ export class SimulationEngine {
     this.stats = { fires:0, signals:0, peakPulses:0 };
   }
 
-  /* ---------- CONTROL ---------- */
-  /**
-   * Reinicia y pasa a RUNNING disparando los nodos raíz (sin entradas). Si el grafo
-   * no tiene raíces, dispara el nodo con más aristas salientes. Emite `SIM_STATE` y `TOAST`.
-   */
+  /** Reinicia y dispara los nodos raíz (o, sin raíces, el de más salidas). */
   start() {
     this.reset();
     this.state = SimState.RUNNING;
 
     const roots = this.graph.roots();
     if (roots.length === 0 && this.graph.nodeCount > 0) {
-      // Grafo cíclico sin raíces → arrancamos desde el nodo de mayor grado saliente
       let best = null, bestDeg = -1;
       for (const n of this.graph.nodes.values()) {
         const d = this.graph.out.get(n.id).size;
@@ -78,7 +63,7 @@ export class SimulationEngine {
     this.bus.emit(EVT.SIM_STATE, this.state);
   }
 
-  /** Reinicia y vuelve a IDLE. Emite `SIM_STATE` y `TOAST`. */
+  /** Reinicia y vuelve a IDLE. */
   stop() {
     this.reset();
     this.state = SimState.IDLE;
@@ -86,7 +71,7 @@ export class SimulationEngine {
     this.bus.emit(EVT.TOAST, { msg:'⏹ Detenido' });
   }
 
-  /** Quita pulsos y temporizadores y pone en cero el estado de nodos y aristas, incluida la `salida` de cada estación. */
+  /** Pone en cero pulsos, temporizadores y el estado de nodos y aristas (incluida `salida`). */
   reset() {
     for (let i = 0; i < this.pulses.length; i++) this.pool.release(this.pulses[i]);
     this.pulses.length = 0;
@@ -103,10 +88,8 @@ export class SimulationEngine {
     for (const e of this.graph.edges.values()) { e.signal = 0; e.flow = 0; }
   }
 
-  /* ---------- NEUROMÓRFICO ---------- */
   /**
-   * Dispara un nodo: emite `SIM_FIRE` y lanza un pulso por cada arista saliente.
-   * No hace nada si el nodo ya disparó `CFG.MAX_FIRES` veces en esta corrida.
+   * Emite `SIM_FIRE` y lanza un pulso por arista saliente (máx. `CFG.MAX_FIRES` por corrida).
    * @param {Object} node
    */
   _fire(node) {
@@ -121,7 +104,6 @@ export class SimulationEngine {
 
     this.bus.emit(EVT.SIM_FIRE, { nodeId: node.id, eventId: node.eventId });
 
-    // RAMIFICACIÓN: un axón → N dendritas
     const outSet = this.graph.out.get(node.id);
     if (!outSet) return;
     for (const eid of outSet) {
@@ -140,8 +122,7 @@ export class SimulationEngine {
   }
 
   /**
-   * Un pulso llegó al final de su arista: suma el peso de la arista al potencial del destino
-   * y emite `SIM_SIGNAL`. Si el potencial alcanza el umbral, agenda el disparo tras `CFG.REFRACTORY` s.
+   * Suma el peso al destino y agenda su disparo si llega al umbral.
    * @param {Object} pulse
    */
   _arrive(pulse) {
@@ -165,9 +146,8 @@ export class SimulationEngine {
     }
   }
 
-  /** Ilumina todas las cajas conectadas, en cascada BFS escalonada. */
+  /** Ilumina las cajas conectadas en cascada, por profundidad. */
   illuminate() {
-    // BFS por profundidad desde las raíces para un efecto ordenado
     const depth = new Map();
     const queue = [];
     for (const n of this.graph.roots()) { depth.set(n.id, 0); queue.push(n); }
@@ -191,7 +171,6 @@ export class SimulationEngine {
       const d = depth.get(n.id) || 0;
       this.flashQueue.push({ nodeId: n.id, at: this.elapsed + d * 0.11 + i * 0.012 });
       i++;
-      // Encendemos también sus aristas
       for (const eid of this.graph.out.get(n.id) || []) {
         const e = this.graph.edges.get(eid);
         if (e) e.signal = 1;
@@ -200,20 +179,17 @@ export class SimulationEngine {
     this.bus.emit(EVT.TOAST, { msg:`✨ ${i} caja(s) conectada(s) iluminada(s)`, kind:'ok' });
   }
 
-  /* ---------- UPDATE (delta-time) ---------- */
   /**
-   * Avanza la simulación un fotograma. Fuera de RUNNING solo corren la iluminación y los decaimientos.
-   * Al quedarse sin pulsos ni disparos pendientes pasa sola a IDLE.
-   * @param {number} dt - Tiempo transcurrido en segundos (se limita a 0.05).
+   * Avanza un fotograma; pasa sola a IDLE cuando no quedan pulsos.
+   * @param {number} dt - Segundos (máx. 0.05).
    */
   update(dt) {
-    // Clamp defensivo: evita saltos gigantes al volver de una pestaña inactiva
+    // Evita saltos al volver de una pestaña inactiva.
     dt = Math.min(dt, 0.05);
     this.elapsed += dt;
 
     const running = this.state === SimState.RUNNING;
 
-    /* --- Timers de disparo --- */
     for (let i = this.fireTimers.length - 1; i >= 0; i--) {
       if (this.elapsed >= this.fireTimers[i].at) {
         const t = this.fireTimers[i];
@@ -225,7 +201,6 @@ export class SimulationEngine {
       }
     }
 
-    /* --- Cola de iluminación (funciona siempre, incluso en IDLE) --- */
     for (let i = this.flashQueue.length - 1; i >= 0; i--) {
       if (this.elapsed >= this.flashQueue[i].at) {
         const n = this.graph.nodes.get(this.flashQueue[i].nodeId);
@@ -234,7 +209,6 @@ export class SimulationEngine {
       }
     }
 
-    /* --- Pulsos viajando --- */
     if (running) {
       for (let i = this.pulses.length - 1; i >= 0; i--) {
         const p = this.pulses[i];
@@ -247,7 +221,6 @@ export class SimulationEngine {
       }
     }
 
-    /* --- Decaimiento exponencial (independiente del framerate) --- */
     const kAct  = Math.pow(0.5, dt / CFG.ACTIVATION_HL);
     const kPot  = Math.pow(0.5, dt / CFG.POTENTIAL_HL);
     const kSig  = Math.pow(0.5, dt / CFG.SIGNAL_HL);
@@ -263,7 +236,6 @@ export class SimulationEngine {
       if (e.signal > 0.001) e.signal *= kSig; else e.signal = 0;
     }
 
-    /* --- Auto-stop cuando la red se apaga --- */
     if (running && this.pulses.length === 0 && this.fireTimers.length === 0) {
       this.state = SimState.IDLE;
       this.bus.emit(EVT.SIM_STATE, this.state);
@@ -274,7 +246,7 @@ export class SimulationEngine {
     }
   }
 
-  /** Geometría cacheada por versión del grafo (invalidación por dirty-flag). */
+  /** Geometría cacheada; se recalcula cuando cambia `geometryVersion`. */
   _geo(edge) {
     if (edge._geo && edge._gv === this.graph.geometryVersion) return edge._geo;
     const a = this.graph.nodes.get(edge.from);
@@ -288,7 +260,6 @@ export class SimulationEngine {
   }
 
   /**
-   * Geometría de la arista (cacheada).
    * @param {Object} edge
    * @returns {Object} Ver `GEO.build`.
    */

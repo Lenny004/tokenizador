@@ -2,15 +2,9 @@ import { CFG, EVT, clamp } from './nucleo.js';
 import { NODE_TYPES, NodeFactory } from './grafo.js';
 import { ESTACIONES, detalle } from './estaciones.js';
 
-/* ==================================================================
-   9 · CONTROLLER  (input → comandos sobre el modelo, patrón Command)
-   ================================================================== */
 /**
- * Traduce el ratón sobre el canvas en acciones: conectar desde el puerto derecho,
- * seleccionar y arrastrar cajas, seleccionar aristas, mover la vista, zoom y doble clic.
- * Los listeners se registran en el constructor y nunca se quitan.
- *
- * @param {HTMLCanvasElement} canvas - El `#stage`; se le ponen las clases `grabbing` y `connecting`.
+ * Convierte el ratón sobre el canvas en acciones (conectar, arrastrar, pan, zoom).
+ * @param {HTMLCanvasElement} canvas - `#stage`.
  * @param {NeuroFlowApp} app
  */
 export class Controller {
@@ -31,14 +25,14 @@ export class Controller {
 
   /**
    * @param {PointerEvent|MouseEvent} e
-   * @returns {{x:number, y:number}} Posición relativa al canvas.
+   * @returns {{x:number, y:number}} Relativa al canvas.
    */
   _local(e) {
     const r = this.canvas.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
-  /** Registra pointerdown/move/up/cancel, wheel (no pasivo, para poder cancelar el scroll), dblclick y contextmenu (anulado). */
+  /** Registra los listeners; `wheel` no es pasivo para poder cancelar el scroll. */
   _bind() {
     const c = this.canvas;
     c.addEventListener('pointerdown', (e) => this._onDown(e));
@@ -50,27 +44,24 @@ export class Controller {
     c.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  /* ---------- PORT HIT TEST ---------- */
   /**
    * @param {number} wx
-   * @param {number} wy - Punto en píxeles de mundo.
-   * @returns {{node:Object, port:'in'|'out'}|null} Puerto bajo el punto (radio ≈ 1.9 × `CFG.PORT_R` en pantalla).
+   * @param {number} wy - Px de mundo.
+   * @returns {{node:Object, port:'in'|'out'}|null}
    */
   _portAt(wx, wy) {
     const rOut = CFG.PORT_R * 1.9 / this.renderer.cam.zoom;
     const rIn  = CFG.PORT_R * 1.9 / this.renderer.cam.zoom;
     for (const n of this.app.graph.nodes.values()) {
       const oy = n.y + n.h * 0.5;
-      // Salida
       if (Math.hypot(wx - (n.x + n.w), wy - oy) <= rOut) return { node: n, port: 'out' };
-      // Entrada
       if (Math.hypot(wx - n.x, wy - oy) <= rIn) return { node: n, port: 'in' };
     }
     return null;
   }
 
   /**
-   * Decide la acción según lo que hay bajo el puntero: puerto de salida, caja, arista o vacío.
+   * Inicia conexión, arrastre, selección de arista o pan según lo que hay debajo.
    * @param {PointerEvent} e
    */
   _onDown(e) {
@@ -79,7 +70,6 @@ export class Controller {
     const wy = this.renderer.s2wy(p.y);
     this.moved = false;
 
-    // 1) Puerto → iniciar conexión
     const port = this._portAt(wx, wy);
     if (port && port.port === 'out' && e.button === 0) {
       this.mode = 'connect';
@@ -90,7 +80,6 @@ export class Controller {
       return;
     }
 
-    // 2) Nodo → seleccionar + arrastrar
     const node = this.renderer.hitTestNode(wx, wy);
     if (node && e.button === 0) {
       this.app.select({ kind:'node', id: node.id });
@@ -103,14 +92,12 @@ export class Controller {
       return;
     }
 
-    // 3) Arista → seleccionar
     const edge = this._edgeAt(p.x, p.y);
     if (edge && e.button === 0) {
       this.app.select({ kind:'edge', id: edge.id });
       return;
     }
 
-    // 4) Vacío → deseleccionar + pan
     if (e.button === 0 || e.button === 1) {
       this.app.select(null);
       this.mode = 'pan';
@@ -122,8 +109,8 @@ export class Controller {
 
   /**
    * @param {number} sx
-   * @param {number} sy - Punto en pantalla.
-   * @returns {Object|null} Primera arista a menos de 9 px del punto.
+   * @param {number} sy - Pantalla.
+   * @returns {Object|null} Arista a menos de 9 px.
    */
   _edgeAt(sx, sy) {
     const graph = this.app.graph;
@@ -141,9 +128,7 @@ export class Controller {
     return null;
   }
 
-  /**
-   * @returns {number} Distancia del punto (px, py) al segmento (x1, y1)–(x2, y2).
-   */
+  /** @returns {number} Distancia del punto (px, py) al segmento. */
   _segDist(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const l2 = dx * dx + dy * dy;
@@ -154,7 +139,7 @@ export class Controller {
   }
 
   /**
-   * Arrastra la caja, mueve la vista, actualiza la conexión en curso o cambia el cursor.
+   * Continúa la acción en curso o actualiza el cursor.
    * @param {PointerEvent} e
    */
   _onMove(e) {
@@ -191,7 +176,6 @@ export class Controller {
       return;
     }
 
-    // Hover cursor
     const overPort = this._portAt(wx, wy);
     this.canvas.style.cursor = overPort?.port === 'out' ? 'crosshair'
                              : r.hitTestNode(wx, wy) ? 'move'
@@ -199,7 +183,7 @@ export class Controller {
   }
 
   /**
-   * Termina la acción; si se estaba conectando y se suelta sobre otra caja, crea la arista (o avisa si es inválida).
+   * Termina la acción; crea la arista si se suelta sobre otra caja.
    * @param {PointerEvent} e
    */
   _onUp(e) {
@@ -213,7 +197,6 @@ export class Controller {
         const edge = this.app.graph.addEdge(this.connectFrom.id, target.id, 1);
         if (edge) {
           this.app.bus.emit(EVT.TOAST, { msg:`🔗 ${this.connectFrom.label} → ${target.label}`, kind:'ok' });
-          // Feedback: ambas cajas se iluminan al conectarse
           this.connectFrom.activation = 1;
           target.activation = 1;
         } else {
@@ -232,7 +215,7 @@ export class Controller {
   }
 
   /**
-   * Zoom hacia el punto bajo el ratón, limitado a [`CFG.MIN_ZOOM`, `CFG.MAX_ZOOM`].
+   * Zoom hacia el ratón, entre `CFG.MIN_ZOOM` y `CFG.MAX_ZOOM`.
    * @param {WheelEvent} e
    */
   _onWheel(e) {
@@ -247,7 +230,7 @@ export class Controller {
     if (newZoom === cam.zoom) return;
 
     cam.zoom = newZoom;
-    // Zoom hacia el cursor (mantiene el punto bajo el mouse)
+    // Mantiene fijo el punto bajo el ratón.
     cam.x = wx - (p.x - this.renderer.W * 0.5) / cam.zoom;
     cam.y = wy - (p.y - this.renderer.H * 0.5) / cam.zoom;
 
@@ -255,7 +238,7 @@ export class Controller {
   }
 
   /**
-   * Selecciona la caja y enfoca el campo "Etiqueta" del inspector.
+   * Selecciona la caja y enfoca su etiqueta en el inspector.
    * @param {MouseEvent} e
    */
   _onDblClick(e) {
@@ -270,13 +253,9 @@ export class Controller {
   }
 }
 
-/* ==================================================================
-   10 · UI  (Inspector + Toasts + Toolbar)
-   ================================================================== */
 /**
- * Panel derecho (`#inspector`): muestra y edita la caja o conexión seleccionada.
- * Se vuelve a dibujar en cada `SELECTION` y actualiza la salida con `NODE_OUTPUT`.
- * @param {HTMLElement} host - El `<aside id="inspector">`.
+ * Panel `#inspector`: muestra y edita la selección; escucha `SELECTION` y `NODE_OUTPUT`.
+ * @param {HTMLElement} host
  * @param {NeuroFlowApp} app
  */
 export class Inspector {
@@ -285,7 +264,6 @@ export class Inspector {
     this.app = app;
     this.selection = null;
     app.bus.on(EVT.SELECTION, (sel) => this.render(sel));
-    // Cuando una estación termina su paso, refrescamos su salida si está seleccionada.
     app.bus.on(EVT.NODE_OUTPUT, (n) => {
       if (this.selection?.kind === 'node' && this.selection.id === n.id) this._paintOutput(n);
     });
@@ -293,8 +271,7 @@ export class Inspector {
   }
 
   /**
-   * Reemplaza el contenido del panel: estado vacío, formulario de caja o de conexión.
-   * Los campos editados modifican el nodo/arista directamente y emiten `NODE_UPDATED` o `GRAPH_CHANGED`.
+   * Redibuja el panel para la selección.
    * @param {{kind:'node'|'edge', id:string}|null} sel
    */
   render(sel) {
@@ -419,7 +396,7 @@ export class Inspector {
     }
   }
 
-  /** Escribe en el inspector lo que produjo la estación. */
+  /** Muestra la salida de la estación. */
   _paintOutput(n) {
     const pre = this.host.querySelector('[data-out="salida"]');
     if (!pre) return;
@@ -432,7 +409,7 @@ export class Inspector {
   }
 
   /**
-   * Conecta los campos del formulario de caja (etiqueta, tipo, umbral, peso, eliminar).
+   * Conecta los campos del formulario de caja.
    * @param {Object} n
    */
   _wireNode(n) {
@@ -481,7 +458,7 @@ export class Inspector {
 }
 
 /**
- * Escapa `& < > " '` para insertar texto en HTML.
+ * Escapa texto para insertarlo en HTML.
  * @param {*} s
  * @returns {string}
  */
@@ -492,7 +469,7 @@ export function escapeHtml(s) {
 }
 
 /**
- * Muestra avisos breves en `#toasts` cada vez que llega un evento `TOAST`.
+ * Muestra avisos en `#toasts` con cada evento `TOAST`.
  * @param {HTMLElement} host
  * @param {EventBus} bus
  */
@@ -502,9 +479,9 @@ export class ToastManager {
     bus.on(EVT.TOAST, ({ msg, kind }) => this.push(msg, kind));
   }
   /**
-   * Agrega un aviso que se oculta a los 2.4 s y se quita del DOM 0.24 s después.
+   * Agrega un aviso visible 2.4 s.
    * @param {string} msg
-   * @param {''|'ok'|'warn'} [kind=''] - Clase CSS extra (color del borde).
+   * @param {''|'ok'|'warn'} [kind='']
    */
   push(msg, kind = '') {
     const el = document.createElement('div');

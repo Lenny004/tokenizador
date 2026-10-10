@@ -1,8 +1,7 @@
-// Núcleo del simulador: configuración, utilidades, EventBus (bus de eventos),
-// pool de objetos, índice espacial y geometría de las conexiones.
+// Núcleo del simulador: configuración, EventBus, pool, índice espacial y geometría.
+
 /**
- * Configuración fija del simulador. Distancias en píxeles de "mundo" (antes del zoom),
- * tiempos en segundos; `*_HL` son vidas medias del decaimiento exponencial.
+ * Configuración fija (px de mundo y segundos; *_HL = vida media).
  * @type {Readonly<Object<string, number>>}
  */
 export const CFG = Object.freeze({
@@ -40,23 +39,22 @@ export const now    = () => performance.now() / 1000;
 
 // Estado del módulo: contador que solo incrementa `uid()`.
 let __seq = 0;
-/** ID único, corto y monótono — base del "event id" de cada caja. */
 /**
- * @param {string} prefix - Prefijo, por ejemplo `"N"`, `"E"` o `"EVT"`.
- * @returns {string} Formato `PREFIJO-sss-rrrr`: secuencia en base 36 (3+ caracteres) y 4 caracteres aleatorios.
+ * ID único y monótono.
+ * @param {string} prefix - Prefijo, por ejemplo `"N"`, `"E"` o `"EVT"`
+ * @returns {string} Formato `PREFIJO-sss-rrrr`: secuencia en base 36.
  */
 export const uid = (prefix) =>
   `${prefix}-${(++__seq).toString(36).padStart(3,'0')}-${Math.random().toString(36).slice(2,6)}`;
 
-/** roundRect con fallback (Safari < 16). */
 /**
- * Traza (sin rellenar ni dibujar el borde) un rectángulo con esquinas redondeadas.
+ * Traza un rectángulo redondeado sin rellenarlo (alternativa a `ctx.roundRect`).
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} x
  * @param {number} y
  * @param {number} w
  * @param {number} h - En píxeles de pantalla.
- * @param {number} r - Radio; se limita a la mitad del lado más corto.
+ * @param {number} r - Radio.
  */
 export function roundRect(ctx, x, y, w, h, r) {
   const rr = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
@@ -69,27 +67,7 @@ export function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/* ==================================================================
-   1 · EVENT BUS  (EDA — patrón Observer + cola anti-reentrancia)
-   ------------------------------------------------------------------
-   Los módulos avisan sus cambios (grafo, selección, cámara, simulación)
-   publicando eventos; quien necesite reaccionar se suscribe.
-   ================================================================== */
-/**
- * Nombres de los eventos del EventBus y lo que lleva cada uno (payload):
- * - `NODE_ADDED` / `NODE_REMOVED`: el nodo. Emitidos por `GraphModel`.
- * - `NODE_MOVED`: el nodo arrastrado. Emitido por `Controller`.
- * - `NODE_UPDATED`: el nodo editado. Emitido por `Inspector`.
- * - `EDGE_ADDED` / `EDGE_REMOVED`: la arista. Emitidos por `GraphModel`.
- * - `GRAPH_CHANGED`: `{ reason, id }`, por ejemplo `reason: 'node:add'`.
- * - `SELECTION`: `{ kind: 'node'|'edge', id }` o `null`. Emitido por `NeuroFlowApp.select()`.
- * - `CAMERA`: el objeto cámara `{ x, y, zoom }`.
- * - `SIM_STATE`: el estado nuevo (`SimState`).
- * - `SIM_FIRE`: `{ nodeId, eventId }` cuando un nodo dispara; `NeuroFlowApp` ejecuta ahí la estación.
- * - `SIM_SIGNAL`: `{ nodeId, edgeId }` cuando un pulso llega a un nodo.
- * - `TOAST`: `{ msg, kind }`, con `kind` `''`, `'ok'` o `'warn'`.
- * - `NODE_OUTPUT`: el nodo, después de guardar su `salida`.
- */
+/** Nombres de los eventos del bus. */
 export const EVT = Object.freeze({
   NODE_ADDED:    'node:added',
   NODE_REMOVED:  'node:removed',
@@ -104,14 +82,10 @@ export const EVT = Object.freeze({
   SIM_FIRE:      'sim:fire',
   SIM_SIGNAL:    'sim:signal',
   TOAST:         'ui:toast',
-  NODE_OUTPUT:   'node:output',   // una estación terminó su paso real
+  NODE_OUTPUT:   'node:output',   // una estación guardó su salida
 });
 
-/**
- * Bus de eventos con cola: `emit()` encola y, si no se está despachando ya, vacía la cola
- * de forma síncrona en orden de llegada. Un error en un handler se registra con
- * `console.error` y no detiene a los demás.
- */
+/** Bus de eventos con cola: los handlers pueden emitir sin reentrancia; sus errores se registran y no detienen a los demás. */
 export class EventBus {
   constructor() {
     this._handlers = new Map();
@@ -123,10 +97,10 @@ export class EventBus {
 
   /**
    * Suscribe un handler a un tipo de evento.
-   * @param {string} type - Uno de los valores de `EVT`.
-   * @param {function(*, string): void} fn - Recibe `(payload, type)`.
-   * @param {boolean} [once=false] - Si es `true`, se da de baja después de la primera llamada.
-   * @returns {function(): boolean} Función que da de baja la suscripción.
+   * @param {string} type - Uno de los valores de `EVT`
+   * @param {function(*, string): void} fn - Recibe `(payload, type)`
+   * @param {boolean} [once=false] - Darse de baja tras la primera llamada.
+   * @returns {function(): boolean} Función para darse de baja.
    */
   on(type, fn, once = false) {
     let set = this._handlers.get(type);
@@ -148,10 +122,9 @@ export class EventBus {
   }
 
   /**
-   * Emite un evento. Se ENCOLA para evitar reentrancia:
-   * un handler puede emitir sin corromper el dispatch en curso.
-   * @param {string} type - Uno de los valores de `EVT`.
-   * @param {*} [payload] - Datos del evento (ver `EVT`).
+   * Encola el evento y lo despacha si no hay un despacho en curso.
+   * @param {string} type - Uno de los valores de `EVT`
+   * @param {*} [payload] - Datos del evento.
    */
   emit(type, payload) {
     this._queue.push({ type, payload });
@@ -160,7 +133,7 @@ export class EventBus {
     if (this._depth === 0) this._flush();
   }
 
-  /** Despacha la cola hasta vaciarla, incluidos los eventos que emitan los propios handlers. */
+  /** Despacha la cola hasta vaciarla. */
   _flush() {
     this._depth++;
     try {
@@ -182,15 +155,12 @@ export class EventBus {
   }
 }
 
-/* ==================================================================
-   2 · OBJECT POOL  (cero asignaciones en el hot loop)
-   ================================================================== */
 /**
- * Reutiliza objetos para no crear basura en cada fotograma.
+ * Reutiliza objetos para evitar basura por fotograma.
  * @param {function(): Object} factory - Crea un objeto nuevo.
  * @param {function(Object): void} reset - Limpia un objeto antes de guardarlo.
  * @param {number} [initial=0] - Objetos creados por adelantado.
- * @param {number} [cap=1024] - Máximo de objetos libres guardados; los que sobran se descartan.
+ * @param {number} [cap=1024] - Máximo de objetos libres guardados.
  */
 export class ObjectPool {
   constructor(factory, reset, initial = 0, cap = 1024) {
@@ -202,16 +172,14 @@ export class ObjectPool {
     this.reused   = 0;
     for (let i = 0; i < initial; i++) { this._free.push(factory()); this.created++; }
   }
-  /**
-   * @returns {Object} Un objeto libre, o uno nuevo si no hay.
-   */
+  /** @returns {Object} Un objeto libre, o uno nuevo si no hay. */
   acquire() {
     if (this._free.length) { this.reused++; return this._free.pop(); }
     this.created++;
     return this._factory();
   }
   /**
-   * Devuelve un objeto al pool (lo limpia con `reset`), salvo que el pool esté lleno.
+   * Limpia el objeto y lo guarda, salvo que el pool esté lleno.
    * @param {Object} obj
    */
   release(obj) {
@@ -222,12 +190,8 @@ export class ObjectPool {
   get size() { return this._free.length; }
 }
 
-/* ==================================================================
-   3 · SPATIAL HASH  (hit-testing O(1) en promedio)
-   ================================================================== */
 /**
- * Divide el mundo en celdas cuadradas para encontrar rápido qué nodo hay en un punto.
- * Se reconstruye entera (`clear` + `insert`) cuando los nodos cambian.
+ * Índice por celdas para encontrar rápido el nodo en un punto.
  * @param {number} [cell=CFG.SPATIAL_CELL] - Lado de la celda en píxeles de mundo.
  */
 export class SpatialHash {
@@ -240,7 +204,7 @@ export class SpatialHash {
   clear() { this.buckets.clear(); }
 
   /**
-   * Registra el nodo en todas las celdas que toca su rectángulo.
+   * Registra el nodo en cada celda que toca.
    * @param {{x:number,y:number,w:number,h:number}} node
    */
   insert(node) {
@@ -257,7 +221,7 @@ export class SpatialHash {
     }
   }
 
-  /** Devuelve el primer nodo que contiene el punto (px,py) en coords mundo. */
+  /** Nodo que contiene el punto (coords de mundo), o `null`. */
   hitTest(px, py) {
     const k = this._key(Math.floor(px / this.cell), Math.floor(py / this.cell));
     const b = this.buckets.get(k);
@@ -270,7 +234,7 @@ export class SpatialHash {
     return null;
   }
 
-  /** Candidatos dentro de un AABB (para culling de selección múltiple, etc.). */
+  /** Nodos que tocan el rectángulo dado. */
   queryRect(x, y, w, h, out = []) {
     out.length = 0;
     const c = this.cell;
@@ -292,21 +256,13 @@ export class SpatialHash {
   }
 }
 
-/* ==================================================================
-   6 · GEOMETRÍA DE ARISTAS  (bezier precalculada en Float32Array)
-   ================================================================== */
-/**
- * Geometría de las aristas: curva de Bézier cúbica del puerto de salida de `a`
- * (borde derecho) al de entrada de `b` (borde izquierdo), muestreada en
- * `CFG.BEZIER_SAMPLES` tramos rectos.
- */
+/** Geometría de aristas: Bézier cúbica muestreada en `CFG.BEZIER_SAMPLES` tramos. */
 export const GEO = {
   /**
    * @param {Object} a - Nodo origen.
    * @param {Object} b - Nodo destino.
    * @param {Float32Array} [buffer] - Arreglo a reutilizar si tiene el tamaño correcto.
-   * @returns {{pts: Float32Array, p0x:number, p0y:number, p3x:number, p3y:number, length:number}}
-   *   `pts` alterna x, y; `length` se deja en 0 (se calcula con `approxLength`).
+   * @returns {{pts: Float32Array, p0x:number, p0y:number, p3x:number, p3y:number, length:number}} `pts` alterna x, y; `length` queda en 0.
    */
   build(a, b, buffer) {
     const S = CFG.BEZIER_SAMPLES;
@@ -330,7 +286,7 @@ export const GEO = {
     return { pts, p0x, p0y, p3x, p3y, length: 0 };
   },
 
-  /** Punto sobre la polilínea en t∈[0,1] — escribe en _p[0], _p[1]. */
+  /** Punto en t∈[0,1]; reutiliza `_p` para no crear arreglos. */
   _p: new Float32Array(2),
   pointAt(geo, t) {
     const S = CFG.BEZIER_SAMPLES;
@@ -343,7 +299,7 @@ export const GEO = {
     return this._p;
   },
 
-  /** Longitud aproximada (para velocidad constante percibida). */
+  /** Longitud aproximada de la curva (px de mundo). */
   approxLength(geo) {
     const pts = geo.pts;
     let len = 0;

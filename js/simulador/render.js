@@ -1,19 +1,13 @@
 import { CFG, EVT, SpatialHash, GEO, roundRect } from './nucleo.js';
 import { ESTACIONES, resumen } from './estaciones.js';
 
-/* ==================================================================
-   8 · RENDERER  (layered rendering + culling + LOD + sprites cacheados)
-   ================================================================== */
 /**
- * Dibuja el lienzo en capas: rejilla (cacheada en un canvas aparte), aristas, pulsos,
- * nodos con su vista previa y la conexión en curso. Solo dibuja lo que cae en pantalla.
- *
- * @param {HTMLCanvasElement} canvas - El `#stage`.
+ * Dibuja rejilla, aristas, pulsos, nodos y conexión en curso; omite lo que está fuera de pantalla.
+ * @param {HTMLCanvasElement} canvas - `#stage`.
  * @param {GraphModel} graph
  * @param {SimulationEngine} engine
- * @param {{x:number, y:number, zoom:number}} camera - Centro de la vista en píxeles de mundo y zoom.
- * @param {EventBus} bus - Escucha `NODE_MOVED`, `NODE_ADDED`, `NODE_REMOVED` y `NODE_UPDATED`
- *   (reconstruir el índice espacial) y `CAMERA` (repintar la rejilla).
+ * @param {{x:number, y:number, zoom:number}} camera - Centro (px de mundo) y zoom.
+ * @param {EventBus} bus - Eventos de nodos y cámara invalidan índice y rejilla.
  */
 export class Renderer {
   constructor(canvas, graph, engine, camera, bus) {
@@ -26,20 +20,18 @@ export class Renderer {
 
     this.dpr = 1; this.W = 0; this.H = 0;
 
-    // Capa estática cacheada (optimización #1)
     this.gridCanvas = document.createElement('canvas');
     this._gridDirty = true;
 
     this.showGrid = true;
 
-    // Sprite de glow pre-renderizado (optimización: cero createRadialGradient/frame)
+    // Se pre-renderiza para no crear un gradiente por fotograma.
     this.glowSprite = this._makeGlowSprite();
 
     this.spatial = new SpatialHash();
     this._indexDirty = true;
     this._queryBuf = [];
 
-    // Suscripciones EDA
     bus.on(EVT.NODE_MOVED,   () => { this._indexDirty = true; });
     bus.on(EVT.NODE_ADDED,   () => { this._indexDirty = true; });
     bus.on(EVT.NODE_REMOVED, () => { this._indexDirty = true; });
@@ -47,7 +39,6 @@ export class Renderer {
     bus.on(EVT.NODE_UPDATED, () => { this._indexDirty = true; });
   }
 
-  /* ---------- Glow sprite ---------- */
   _makeGlowSprite() {
     const S = 96;
     const c = document.createElement('canvas');
@@ -63,7 +54,7 @@ export class Renderer {
     return c;
   }
 
-  /** Ajusta el tamaño interno del canvas a su tamaño en pantalla × devicePixelRatio (máximo 2). */
+  /** Ajusta el canvas a su tamaño en pantalla × devicePixelRatio (máx. 2). */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -76,14 +67,12 @@ export class Renderer {
     this._gridDirty = true;
   }
 
-  /* ---------- Coordenadas ---------- */
-  // Conversión de coordenadas: w2s = mundo → pantalla, s2w = pantalla → mundo (píxeles CSS del canvas).
+  // w2s: mundo → pantalla; s2w: pantalla → mundo.
   w2sx(wx) { return (wx - this.cam.x) * this.cam.zoom + this.W * 0.5; }
   w2sy(wy) { return (wy - this.cam.y) * this.cam.zoom + this.H * 0.5; }
   s2wx(sx) { return (sx - this.W * 0.5) / this.cam.zoom + this.cam.x; }
   s2wy(sy) { return (sy - this.H * 0.5) / this.cam.zoom + this.cam.y; }
 
-  /* ---------- Capa de rejilla (solo se repinta si la cámara cambia) ---------- */
   _paintGrid() {
     const g = this.gridCanvas.getContext('2d');
     const W = this.W, H = this.H, dpr = this.dpr;
@@ -92,7 +81,7 @@ export class Renderer {
 
     const z = this.cam.zoom;
     let step = CFG.GRID_SIZE * z;
-    // LOD de rejilla: si está muy densa, duplicamos el paso
+    // Ajusta el paso para que la rejilla no quede muy densa ni muy vacía.
     while (step < 18) step *= 2;
     while (step > 130) step *= 0.5;
 
@@ -109,7 +98,6 @@ export class Renderer {
       }
     }
 
-    // Viñeta sutil
     const vg = g.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.78);
     vg.addColorStop(0, 'rgba(5,7,13,0)');
     vg.addColorStop(1, 'rgba(5,7,13,0.72)');
@@ -117,7 +105,6 @@ export class Renderer {
     g.fillRect(0, 0, W, H);
   }
 
-  /* ---------- Índice espacial ---------- */
   _rebuildIndex() {
     this.spatial.clear();
     for (const n of this.graph.nodes.values()) this.spatial.insert(n);
@@ -126,20 +113,17 @@ export class Renderer {
 
   /**
    * @param {number} wx
-   * @param {number} wy - Punto en píxeles de mundo.
-   * @returns {Object|null} El nodo que contiene el punto (el dibujado encima), o `null`.
+   * @param {number} wy - Px de mundo.
+   * @returns {Object|null}
    */
   hitTestNode(wx, wy) {
     if (this._indexDirty) this._rebuildIndex();
     return this.spatial.hitTest(wx, wy);
   }
 
-  /* ================================================================
-     RENDER PRINCIPAL
-     ================================================================ */
   /**
-   * Dibuja un fotograma completo.
-   * @param {number} dt - Segundos desde el fotograma anterior (este método no lo usa).
+   * Dibuja un fotograma.
+   * @param {number} dt - No se usa.
    */
   render(dt) {
     const ctx = this.ctx;
@@ -149,7 +133,6 @@ export class Renderer {
     ctx.fillStyle = '#05070d';
     ctx.fillRect(0, 0, W, H);
 
-    // --- Capa 1: rejilla cacheada ---
     if (this.showGrid) {
       if (this._gridDirty) { this._paintGrid(); this._gridDirty = false; }
       ctx.drawImage(this.gridCanvas, 0, 0, W, H);
@@ -161,20 +144,15 @@ export class Renderer {
     const vx0 = this.s2wx(-120), vy0 = this.s2wy(-120);
     const vx1 = this.s2wx(W + 120), vy1 = this.s2wy(H + 120);
 
-    // --- Capa 2: aristas ---
     this._drawEdges(ctx, vx0, vy0, vx1, vy1, z);
 
-    // --- Capa 3: pulsos (composición aditiva) ---
     this._drawPulses(ctx, z);
 
-    // --- Capa 4: nodos ---
     this._drawNodes(ctx, vx0, vy0, vx1, vy1, z);
 
-    // --- Capa 5: overlay de conexión ---
     this._drawOverlay(ctx, z);
   }
 
-  /* ---------- ARISTAS ---------- */
   _drawEdges(ctx, vx0, vy0, vx1, vy1, z) {
     const graph = this.graph;
     const engine = this.engine;
@@ -182,14 +160,13 @@ export class Renderer {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // PASO A: aristas inactivas en un solo batch (menos cambios de estado)
+    // Aristas inactivas en un solo trazo; las activas aparte, con brillo.
     ctx.beginPath();
     const activeEdges = [];
     for (const edge of graph.edges.values()) {
       const a = graph.nodes.get(edge.from);
       const b = graph.nodes.get(edge.to);
       if (!a || !b) continue;
-      // Frustum culling
       if (Math.max(a.x, b.x) < vx0 || Math.min(a.x, b.x) > vx1) continue;
       if (Math.max(a.y, b.y) < vy0 || Math.min(a.y, b.y) > vy1) continue;
 
@@ -206,7 +183,6 @@ export class Renderer {
     ctx.lineWidth = Math.max(1, 2 * z);
     ctx.stroke();
 
-    // PASO B: aristas activas con glow (pocas, coste controlado)
     if (activeEdges.length) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -229,7 +205,6 @@ export class Renderer {
     }
   }
 
-  /* ---------- PULSOS ---------- */
   _drawPulses(ctx, z) {
     const pulses = this.engine.pulses;
     if (pulses.length === 0) return;
@@ -244,7 +219,6 @@ export class Renderer {
       if (!edge) continue;
       const geo = this.engine.geoFor(edge);
 
-      // Cabeza del pulso
       const pt = GEO.pointAt(geo, p.t);
       const sx = this.w2sx(pt[0]);
       const sy = this.w2sy(pt[1]);
@@ -252,13 +226,12 @@ export class Renderer {
       const size = (26 + 14 * Math.sin(p.t * Math.PI)) * z;
       ctx.drawImage(sprite, sx - size, sy - size, size * 2, size * 2);
 
-      // Núcleo brillante
       ctx.beginPath();
       ctx.arc(sx, sy, Math.max(1.6, 3.4 * z), 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.96)';
       ctx.fill();
 
-      // Cola (trail) — segmento por detrás de la cabeza
+      // Estela detrás del pulso.
       const tailT = Math.max(0, p.t - 0.16);
       const tail = GEO.pointAt(geo, tailT);
       const tx = this.w2sx(tail[0]);
@@ -277,36 +250,32 @@ export class Renderer {
     ctx.restore();
   }
 
-  /* ---------- NODOS ---------- */
   _drawNodes(ctx, vx0, vy0, vx1, vy1, z) {
     const graph = this.graph;
     const lodText = z >= CFG.LOD_TEXT_ZOOM;
     const lodPort = z >= CFG.LOD_PORT_ZOOM;
 
-    // Separamos activos de inactivos para minimizar cambios de estado (shadowBlur)
+    // Activos al final para que su halo quede encima.
     const active = [];
     const idle   = [];
 
     for (const n of graph.nodes.values()) {
-      // Frustum culling
       if (n.x + n.w < vx0 || n.x > vx1 || n.y + n.h < vy0 || n.y > vy1) continue;
       (n.activation > 0.04 ? active : idle).push(n);
     }
 
-    // --- Inactivos: batch sin sombras ---
     for (const n of idle) this._paintNode(ctx, n, z, lodText, lodPort, false);
-    // --- Activos: con glow ---
     for (const n of active) this._paintNode(ctx, n, z, lodText, lodPort, true);
   }
 
   /**
-   * Dibuja una caja: halo, cuerpo, barra de color, puntos de umbral, textos, vista previa y puertos.
+   * Dibuja una caja.
    * @param {CanvasRenderingContext2D} ctx
    * @param {Object} n - Nodo.
    * @param {number} z - Zoom actual.
-   * @param {boolean} lodText - Dibujar textos (zoom >= `CFG.LOD_TEXT_ZOOM`).
-   * @param {boolean} lodPort - Dibujar puertos y umbral (zoom >= `CFG.LOD_PORT_ZOOM`).
-   * @param {boolean} withGlow - Dibujar el halo (nodos activos).
+   * @param {boolean} lodText - Dibujar textos (según zoom).
+   * @param {boolean} lodPort - Dibujar puertos (según zoom).
+   * @param {boolean} withGlow - Dibujar el halo.
    */
   _paintNode(ctx, n, z, lodText, lodPort, withGlow) {
     const sx = this.w2sx(n.x);
@@ -316,7 +285,6 @@ export class Renderer {
     const r  = Math.min(14 * z, h * 0.32);
     const act = n.activation;
 
-    // Halo exterior
     if (withGlow) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -330,7 +298,6 @@ export class Renderer {
       ctx.restore();
     }
 
-    // Cuerpo
     roundRect(ctx, sx, sy, w, h, r);
     const bodyGrad = ctx.createLinearGradient(sx, sy, sx, sy + h);
     bodyGrad.addColorStop(0, act > 0.03 ? '#182338' : '#111827');
@@ -338,14 +305,12 @@ export class Renderer {
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
-    // Borde
     ctx.lineWidth = Math.max(1, (act > 0.03 ? 2.2 : 1.4) * z);
     ctx.strokeStyle = act > 0.03
       ? `rgba(${n.glow},${0.45 + act * 0.55})`
       : '#243149';
     ctx.stroke();
 
-    // Barra de acento izquierda (color del tipo)
     ctx.save();
     roundRect(ctx, sx, sy, w, h, r);
     ctx.clip();
@@ -356,7 +321,6 @@ export class Renderer {
     ctx.fillRect(sx, sy, Math.max(2.5, 4.5 * z), h);
     ctx.restore();
 
-    // Indicador de umbral (barras de potencial)
     if (lodPort && n.threshold > 0) {
       const bx = sx + w - 12 * z;
       const by = sy + h - 10 * z;
@@ -369,7 +333,7 @@ export class Renderer {
       }
     }
 
-    // Texto (LOD: se omite con zoom bajo → ahorro real de fillText)
+    // Con zoom bajo se omite el texto.
     if (lodText) {
       ctx.save();
       roundRect(ctx, sx, sy, w, h, r);
@@ -387,16 +351,13 @@ export class Renderer {
 
       ctx.restore();
 
-      // Vista previa del resultado real, en letra pequeña DEBAJO de la caja.
       this._paintPreview(ctx, n, sx, sy + h, w, z);
     }
 
-    // Puertos
     if (lodPort) {
       const pr = Math.max(3, CFG.PORT_R * z);
       const cy = sy + h * 0.5;
 
-      // Entrada (izquierda)
       if (this.graph.in.get(n.id)?.size > 0 || n.threshold > 0) {
         ctx.beginPath();
         ctx.arc(sx, cy, pr, 0, Math.PI * 2);
@@ -407,7 +368,7 @@ export class Renderer {
         ctx.stroke();
       }
 
-      // Salida (derecha) — siempre visible
+      // El puerto de salida siempre se dibuja.
       ctx.beginPath();
       ctx.arc(sx + w, cy, pr * 1.1, 0, Math.PI * 2);
       ctx.fillStyle = act > 0.03 ? `rgba(${n.glow},1)` : '#1e293b';
@@ -418,17 +379,14 @@ export class Renderer {
     }
   }
 
-  /* ---------- VISTA PREVIA DE LA ESTACIÓN ---------- */
   /**
-   * Escribe debajo de la caja una línea corta (máximo 34 caracteres): el error en rojo,
-   * "en desarrollo" en ámbar para estaciones pendientes o el `resumen()` de su salida.
-   * No dibuja nada si la caja todavía no tiene salida.
+   * Escribe bajo la caja el error, "en desarrollo" o el resumen de su salida.
    * @param {CanvasRenderingContext2D} ctx
    * @param {Object} n - Nodo.
    * @param {number} sx
-   * @param {number} sy - Esquina inferior izquierda de la caja en pantalla.
-   * @param {number} w - Ancho de la caja en pantalla.
-   * @param {number} z - Zoom actual.
+   * @param {number} sy - Esquina inferior izquierda (pantalla).
+   * @param {number} w
+   * @param {number} z
    */
   _paintPreview(ctx, n, sx, sy, w, z) {
     let texto = '', color = '#94a3b8';
@@ -437,7 +395,7 @@ export class Renderer {
     else if (n.salida !== undefined)     { texto = resumen(n.salida); color = '#cbd5e1'; }
     if (!texto) return;
 
-    // Recortamos para que no se encime con la siguiente caja.
+    // Se recorta para no encimarse con la caja vecina.
     const max = 34;
     if (texto.length > max) texto = texto.slice(0, max - 1) + '…';
     ctx.save();
@@ -448,7 +406,6 @@ export class Renderer {
     ctx.restore();
   }
 
-  /* ---------- OVERLAY (conexión en curso / selección) ---------- */
   _drawOverlay(ctx, z) {
     const ov = this._overlay;
     if (!ov) return;
@@ -471,7 +428,6 @@ export class Renderer {
       ctx.stroke();
       ctx.restore();
 
-      // Punto destino
       ctx.beginPath();
       ctx.arc(x1, y1, 5, 0, Math.PI * 2);
       ctx.fillStyle = ov.valid ? '#4ade80' : '#f87171';
@@ -479,9 +435,6 @@ export class Renderer {
     }
   }
 
-  /**
-   * @param {{type:'connect', fromId:string, sx:number, sy:number, valid:boolean}|null} o -
-   *   Conexión que se está arrastrando (punta en pantalla) o `null` para quitarla.
-   */
+  /** @param {{type:'connect', fromId:string, sx:number, sy:number, valid:boolean}|null} o - Conexión en curso. */
   setOverlay(o) { this._overlay = o; }
 }

@@ -12,6 +12,12 @@ import { CFG, EVT, ObjectPool, GEO } from './nucleo.js';
    ================================================================== */
 export const SimState = Object.freeze({ IDLE:'IDLE', RUNNING:'RUNNING', PAUSED:'PAUSED' });
 
+/**
+ * Mueve la simulación: dispara nodos, avanza pulsos y aplica decaimientos.
+ * No tiene bucle propio: `NeuroFlowApp` llama a `update(dt)` en cada fotograma.
+ * @param {GraphModel} graph
+ * @param {EventBus} bus
+ */
 export class SimulationEngine {
   constructor(graph, bus) {
     this.graph  = graph;
@@ -34,6 +40,10 @@ export class SimulationEngine {
   }
 
   /* ---------- CONTROL ---------- */
+  /**
+   * Reinicia y pasa a RUNNING disparando los nodos raíz (sin entradas). Si el grafo
+   * no tiene raíces, dispara el nodo con más aristas salientes. Emite `SIM_STATE` y `TOAST`.
+   */
   start() {
     this.reset();
     this.state = SimState.RUNNING;
@@ -68,6 +78,7 @@ export class SimulationEngine {
     this.bus.emit(EVT.SIM_STATE, this.state);
   }
 
+  /** Reinicia y vuelve a IDLE. Emite `SIM_STATE` y `TOAST`. */
   stop() {
     this.reset();
     this.state = SimState.IDLE;
@@ -75,6 +86,7 @@ export class SimulationEngine {
     this.bus.emit(EVT.TOAST, { msg:'⏹ Detenido' });
   }
 
+  /** Quita pulsos y temporizadores y pone en cero el estado de nodos y aristas, incluida la `salida` de cada estación. */
   reset() {
     for (let i = 0; i < this.pulses.length; i++) this.pool.release(this.pulses[i]);
     this.pulses.length = 0;
@@ -92,6 +104,11 @@ export class SimulationEngine {
   }
 
   /* ---------- NEUROMÓRFICO ---------- */
+  /**
+   * Dispara un nodo: emite `SIM_FIRE` y lanza un pulso por cada arista saliente.
+   * No hace nada si el nodo ya disparó `CFG.MAX_FIRES` veces en esta corrida.
+   * @param {Object} node
+   */
   _fire(node) {
     const count = this.firedCount.get(node.id) || 0;
     if (count >= CFG.MAX_FIRES) return;      // guarda anti-bucle
@@ -122,6 +139,11 @@ export class SimulationEngine {
     if (this.pulses.length > this.stats.peakPulses) this.stats.peakPulses = this.pulses.length;
   }
 
+  /**
+   * Un pulso llegó al final de su arista: suma el peso de la arista al potencial del destino
+   * y emite `SIM_SIGNAL`. Si el potencial alcanza el umbral, agenda el disparo tras `CFG.REFRACTORY` s.
+   * @param {Object} pulse
+   */
   _arrive(pulse) {
     const edge = this.graph.edges.get(pulse.edgeId);
     if (!edge) return;
@@ -179,6 +201,11 @@ export class SimulationEngine {
   }
 
   /* ---------- UPDATE (delta-time) ---------- */
+  /**
+   * Avanza la simulación un fotograma. Fuera de RUNNING solo corren la iluminación y los decaimientos.
+   * Al quedarse sin pulsos ni disparos pendientes pasa sola a IDLE.
+   * @param {number} dt - Tiempo transcurrido en segundos (se limita a 0.05).
+   */
   update(dt) {
     // Clamp defensivo: evita saltos gigantes al volver de una pestaña inactiva
     dt = Math.min(dt, 0.05);
@@ -260,5 +287,10 @@ export class SimulationEngine {
     return geo;
   }
 
+  /**
+   * Geometría de la arista (cacheada).
+   * @param {Object} edge
+   * @returns {Object} Ver `GEO.build`.
+   */
   geoFor(edge) { return this._geo(edge); }
 }

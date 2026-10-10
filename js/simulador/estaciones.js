@@ -21,6 +21,12 @@ import { licuar, rasgoMasFuerte } from '../liquido.js';
 // Estación que aún no existe: deja pasar el dato sin tocarlo.
 const pasarIgual = (dato) => dato;
 
+/**
+ * @typedef {Object} Estacion
+ * @property {function(*, string): *} procesar - Recibe `(dato, entradaUsuario)` y devuelve el resultado; puede lanzar Error.
+ * @property {boolean} pendiente - `true` si la estación todavía no está implementada.
+ */
+/** @type {Object<string, Estacion>} */
 export const ESTACIONES = {
   // 1. La primera caja no recibe nada: toma el texto del cuadro de entrada.
   texto:       { procesar: (_dato, entradaUsuario) => entradaUsuario, pendiente: false },
@@ -50,14 +56,22 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  // 6. Pendiente (próxima clase): deja pasar la mezcla sin cambios.
+  // 6. En desarrollo: deja pasar la mezcla sin cambios.
   prediccion:  { procesar: pasarIgual, pendiente: true },
   // Caja final: muestra lo último que llegó.
   salida:      { procesar: pasarIgual, pendiente: false },
 };
 
-// Ejecuta la estación de una caja. Si el tipo no está en el registro
-// (por ejemplo una "Neurona" genérica), el dato pasa igual.
+/**
+ * Ejecuta la estación de una caja. Si el tipo no está en el registro
+ * (por ejemplo una "Neurona" genérica), el dato pasa igual.
+ * Los errores de la estación se capturan: el dato pasa sin cambios y se devuelve el mensaje.
+ *
+ * @param {string} tipo - Tipo de la caja (clave de `ESTACIONES`).
+ * @param {*} dato - Salida de la caja anterior (`undefined` en la primera).
+ * @param {string} entradaUsuario - Texto del campo `#entrada-sim`.
+ * @returns {{resultado: *, pendiente: boolean, error: string|null}}
+ */
 export function ejecutarEstacion(tipo, dato, entradaUsuario) {
   const estacion = ESTACIONES[tipo];
   if (!estacion) return { resultado: dato, pendiente: false, error: null };
@@ -68,7 +82,11 @@ export function ejecutarEstacion(tipo, dato, entradaUsuario) {
   }
 }
 
-// Convierte un resultado en texto corto para dibujarlo debajo de la caja.
+/**
+ * Convierte un resultado en texto corto para dibujarlo debajo de la caja.
+ * @param {*} dato - Texto, fichas, mezcla del ternario líquido u otro valor.
+ * @returns {string} `''` si no hay dato.
+ */
 export function resumen(dato) {
   if (dato === undefined) return '';
   if (typeof dato === 'string') return `"${dato}"`;
@@ -83,7 +101,11 @@ export function resumen(dato) {
 // ¿Es el resultado del ternario líquido? ({ vector, estado, ... })
 const esMezcla = (dato) => dato && Array.isArray(dato.vector) && 'estado' in dato;
 
-// Versión larga para el inspector (una ficha por línea).
+/**
+ * Versión larga para el inspector (una ficha por línea).
+ * @param {*} dato - Texto, fichas, fichas codificadas, mezcla u otro valor (se muestra como JSON).
+ * @returns {string}
+ */
 export function detalle(dato) {
   if (dato === undefined) return '(todavía no ha recibido ningún pulso)';
   if (typeof dato === 'string') return `"${dato}"`;

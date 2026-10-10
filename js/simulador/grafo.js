@@ -3,6 +3,11 @@ import { CFG, EVT, uid } from './nucleo.js';
 /* ==================================================================
    4 · NODE FACTORY  (patrón Factory + Strategy de render)
    ================================================================== */
+/**
+ * Tipos de caja: etiqueta, colores (`glow` es "r,g,b" para usar en rgba), umbral de
+ * disparo, icono y descripción. Las claves de las estaciones (`texto`, `normalizar`, ...)
+ * coinciden con las de `ESTACIONES` en estaciones.js.
+ */
 export const NODE_TYPES = Object.freeze({
   trigger: { label:'Trigger',  color:'#4ade80', glow:'74,222,128',  threshold:0, icon:'⚡', desc:'Fuente / entrada' },
   neuron:  { label:'Neurona',  color:'#38bdf8', glow:'56,189,248',  threshold:1, icon:'🧠', desc:'Procesa 1 señal' },
@@ -15,11 +20,19 @@ export const NODE_TYPES = Object.freeze({
   tokenizador: { label:'Tokenizador ternario',   color:'#22d3ee', glow:'34,211,238',  threshold:1, icon:'✂', desc:'Estación 3' },
   codificador: { label:'Codificador',            color:'#a78bfa', glow:'167,139,250', threshold:1, icon:'⚖', desc:'Estación 4' },
   liquido:     { label:'Ternario líquido',       color:'#2dd4bf', glow:'45,212,191',  threshold:1, icon:'🫗', desc:'Estación 5' },
-  prediccion:  { label:'Predicción estocástica', color:'#64748b', glow:'100,116,139', threshold:1, icon:'⏳', desc:'Estación 6 · pendiente' },
+  prediccion:  { label:'Predicción estocástica', color:'#64748b', glow:'100,116,139', threshold:1, icon:'⏳', desc:'Estación 6 · en desarrollo' },
   salida:      { label:'Salida',                 color:'#f472b6', glow:'244,114,182', threshold:1, icon:'📤', desc:'Resultado final' },
 });
 
 export class NodeFactory {
+  /**
+   * Crea un nodo nuevo (no lo agrega al grafo).
+   * @param {string} type - Clave de `NODE_TYPES`; si no existe se usan los datos de `neuron`.
+   * @param {number} x
+   * @param {number} y - Esquina superior izquierda en píxeles de mundo.
+   * @param {{label?: string, threshold?: number, weight?: number}} [overrides]
+   * @returns {Object} Nodo con `id` y `eventId` únicos, datos del tipo y estado de ejecución en cero.
+   */
   static create(type, x, y, overrides = {}) {
     const preset = NODE_TYPES[type] || NODE_TYPES.neuron;
     const id     = uid('N');
@@ -47,12 +60,21 @@ export class NodeFactory {
       createdAt:  Date.now(),
     };
   }
+  /**
+   * @param {string} type
+   * @returns {Object} Datos del tipo, o los de `neuron` si no existe.
+   */
   static preset(type) { return NODE_TYPES[type] || NODE_TYPES.neuron; }
 }
 
 /* ==================================================================
    5 · GRAPH MODEL  (estructura de datos + listas de adyacencia)
    ================================================================== */
+/**
+ * Guarda nodos y aristas, con listas de adyacencia por nodo, y emite eventos en cada cambio.
+ * `geometryVersion` aumenta con cada cambio para invalidar la geometría cacheada de las aristas.
+ * @param {EventBus} bus
+ */
 export class GraphModel {
   constructor(bus) {
     this.bus = bus;
@@ -64,6 +86,11 @@ export class GraphModel {
   }
 
   /* ---------- NODOS ---------- */
+  /**
+   * Agrega el nodo y emite `NODE_ADDED` y `GRAPH_CHANGED`.
+   * @param {Object} node
+   * @returns {Object} El mismo nodo.
+   */
   addNode(node) {
     this.nodes.set(node.id, node);
     this.out.set(node.id, new Set());
@@ -74,6 +101,11 @@ export class GraphModel {
     return node;
   }
 
+  /**
+   * Elimina el nodo y sus aristas; emite `NODE_REMOVED` y `GRAPH_CHANGED`.
+   * @param {string} id
+   * @returns {boolean} `false` si el nodo no existía.
+   */
   removeNode(id) {
     if (!this.nodes.has(id)) return false;
     // Elimina aristas huérfanas (evita redundancia / memory leaks)
@@ -90,6 +122,13 @@ export class GraphModel {
   }
 
   /* ---------- ARISTAS ---------- */
+  /**
+   * Conecta dos nodos y emite `EDGE_ADDED` y `GRAPH_CHANGED`.
+   * @param {string} fromId
+   * @param {string} toId
+   * @param {number} [weight=1] - Potencial que suma al nodo destino cada pulso.
+   * @returns {Object|null} La arista, o `null` si es un auto-lazo, un duplicado o falta algún nodo.
+   */
   addEdge(fromId, toId, weight = 1) {
     if (fromId === toId) return null;                  // sin auto-lazos
     if (!this.nodes.has(fromId) || !this.nodes.has(toId)) return null;
@@ -113,6 +152,11 @@ export class GraphModel {
     return edge;
   }
 
+  /**
+   * Elimina la arista y emite `EDGE_REMOVED` y `GRAPH_CHANGED`.
+   * @param {string} id
+   * @returns {boolean} `false` si no existía.
+   */
   removeEdge(id) {
     const edge = this.edges.get(id);
     if (!edge) return false;
@@ -142,6 +186,7 @@ export class GraphModel {
   get nodeCount() { return this.nodes.size; }
   get edgeCount() { return this.edges.size; }
 
+  /** Elimina todas las aristas y nodos (emitiendo los eventos de cada uno). */
   clear() {
     for (const id of Array.from(this.edges.keys())) this.removeEdge(id);
     for (const id of Array.from(this.nodes.keys())) this.removeNode(id);

@@ -12,6 +12,15 @@ const PROTEGIDAS = [
   { letra: "ñ", marca: "\uE000" },
 ];
 
+/**
+ * Normaliza un texto para que las variantes de una misma frase queden idénticas.
+ * Pasa a minúsculas, quita tildes y diéresis (conservando la ñ), cambia signos
+ * y emojis por espacios, junta espacios repetidos y recorta los extremos.
+ *
+ * @param {string} texto - Texto tal como lo escribió la persona.
+ * @returns {string} Texto limpio: solo `a-z`, `ñ`, dígitos y espacios simples; `""` si no queda nada.
+ * @example normalizar("¡QUIERO   Pupusas!") // "quiero pupusas"
+ */
 export function normalizar(texto) {
   let t = texto
     .normalize("NFC")       // 0. Une letra + tilde en un solo carácter (algunos teclados, como el de Mac, las mandan separadas)

@@ -12,6 +12,13 @@ const TIPOS_GENERICOS = ['neuron', 'logic', 'memory', 'action'];
 /* ==================================================================
    11 · APP  (Facade — orquesta todo)
    ================================================================== */
+/**
+ * Crea y conecta todas las piezas del simulador, arma la escena de las estaciones
+ * y arranca el bucle de dibujo con `requestAnimationFrame` (no se detiene nunca).
+ * Necesita en la página: `#stage`, `#toasts`, `#inspector`, `#entrada-sim`, los botones
+ * `#btn-play`, `#btn-pause`, `#btn-stop`, `#btn-add`, `#btn-illuminate`, `#btn-fit`, `#btn-grid`
+ * y los indicadores `#stat-state`, `#stat-nodes`, `#stat-edges`, `#stat-pulses`, `#stat-fps`, `#led-sim`.
+ */
 export class NeuroFlowApp {
   constructor() {
     this.bus = new EventBus();
@@ -68,7 +75,7 @@ export class NeuroFlowApp {
     };
   }
 
-  /* ---------- Toolbar ---------- */
+  /** Registra los clics de la barra de herramientas (Play/continuar, Pausa, Stop, Neurona, Iluminar, Encuadrar, Rejilla). */
   _wireToolbar() {
     const d = this.dom;
 
@@ -100,7 +107,10 @@ export class NeuroFlowApp {
     });
   }
 
-  /* ---------- Teclado ---------- */
+  /**
+   * Atajos de teclado (ignorados mientras se escribe en input, select o textarea):
+   * Espacio = Play/Pausa, Supr/Retroceso = borrar selección, Esc = deseleccionar, F = encuadrar.
+   */
   _wireKeyboard() {
     window.addEventListener('keydown', (e) => {
       const tag = (e.target.tagName || '').toLowerCase();
@@ -124,7 +134,7 @@ export class NeuroFlowApp {
     });
   }
 
-  /* ---------- Resize ---------- */
+  /** Redimensiona el canvas 60 ms después del último `resize` de la ventana o del contenedor. */
   _wireResize() {
     let t = 0;
     const doResize = () => { clearTimeout(t); t = setTimeout(() => this.resize(), 60); };
@@ -139,7 +149,10 @@ export class NeuroFlowApp {
     this.renderer._gridDirty = true;
   }
 
-  /* ---------- Observadores EDA (la UI reacciona sola) ---------- */
+  /**
+   * Suscripciones al EventBus: actualizar la barra con `SIM_STATE` y `GRAPH_CHANGED`,
+   * reiniciar la simulación si el grafo cambia mientras corre y ejecutar la estación en `SIM_FIRE`.
+   */
   _wireBusObservers() {
     this.bus.on(EVT.SIM_STATE, (state) => {
       const running = state === SimState.RUNNING;
@@ -180,7 +193,11 @@ export class NeuroFlowApp {
     });
   }
 
-  /** Dato que llega a una caja: la salida de la primera caja anterior que ya tenga resultado. */
+  /**
+   * Dato que llega a una caja: la salida de la primera caja anterior que ya tenga resultado.
+   * @param {Object} n - Nodo destino.
+   * @returns {*} Esa salida, o `undefined` si no hay ninguna (por ejemplo en la caja raíz).
+   */
   _datoDeEntrada(n) {
     for (const eid of this.graph.in.get(n.id) || []) {
       const anterior = this.graph.nodes.get(this.graph.edges.get(eid)?.from);
@@ -189,13 +206,16 @@ export class NeuroFlowApp {
     return undefined;
   }
 
-  /* ---------- Selección ---------- */
+  /**
+   * Cambia la selección y emite `SELECTION`.
+   * @param {{kind:'node'|'edge', id:string}|null} sel
+   */
   select(sel) {
     this.selection = sel;
     this.bus.emit(EVT.SELECTION, sel);
   }
 
-  /* ---------- Encuadrar ---------- */
+  /** Centra la cámara y ajusta el zoom (máximo 1.5) para ver todas las cajas; emite `CAMERA`. */
   fitView() {
     if (this.graph.nodeCount === 0) {
       this.camera.x = 0; this.camera.y = 0; this.camera.zoom = 1;
@@ -218,7 +238,7 @@ export class NeuroFlowApp {
     this.bus.emit(EVT.CAMERA, this.camera);
   }
 
-  /* ---------- Escena inicial: las 6 estaciones + Salida ---------- */
+  /** Crea las 6 estaciones y la caja Salida en fila, de izquierda a derecha, conectadas en orden. */
   _bootstrapScene() {
     // Orden de la línea de producción (izquierda → derecha).
     const orden = ['texto', 'normalizar', 'tokenizador', 'codificador', 'liquido', 'prediccion', 'salida'];
@@ -237,6 +257,7 @@ export class NeuroFlowApp {
   /* ================================================================
      BUCLE PRINCIPAL — rAF + delta-time + culling de frames
      ================================================================ */
+  /** Bucle principal (rAF): avanza la simulación, dibuja y actualiza FPS y contadores cada 0.5 s / 0.15 s. */
   _loop() {
     const t = now();
     let dt = t - this._lastT;

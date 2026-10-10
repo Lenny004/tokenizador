@@ -68,9 +68,10 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   └── simulador/          # núcleo (EventBus), grafo, motor, dibujo, interfaz, app y registro de estaciones
 ├── data/
 │   └── ejemplos.json       # preguntas y respuestas de ejemplo (todavía vacío)
-└── pruebas/
-    ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
-    └── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
+├── pruebas/
+│   ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
+│   └── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
+└── skills/                 # guías de documentación del proyecto: README y JSDoc
 ```
 
 <!-- keep -->

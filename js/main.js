@@ -4,13 +4,22 @@ import { tokenizar } from "./tokenizador.js";
 import { codificar } from "./codificador.js";
 import { licuar, rasgoMasFuerte } from "./liquido.js";
 
+// Elementos del tablero (index.html) que se leen o se escriben:
+//   #entrada                         textarea de la estación 1 (se lee su valor)
+//   #normalizar .resultado           <p> con el texto limpio
+//   #tokenizador .resultado          <ul> con una ficha por línea
+//   #codificador .resultado          <ul> con el peso y el motivo de cada ficha
+//   #ternario-liquido .resultado     <p> con el vector, el estado y el rasgo más fuerte
 const entrada = document.querySelector("#entrada");
 const salidaNormalizar = document.querySelector("#normalizar .resultado");
 const salidaTokens = document.querySelector("#tokenizador .resultado");
 const salidaPesos = document.querySelector("#codificador .resultado");
 const salidaLiquido = document.querySelector("#ternario-liquido .resultado");
 
-// Cada vez que escribes algo, el texto recorre la línea de producción.
+/**
+ * Pasa el texto de `#entrada` por las estaciones 2 a 5 y reescribe el resultado de cada caja.
+ * Se ejecuta una vez al cargar y luego en cada evento `input` del textarea.
+ */
 function procesar() {
   const limpio = normalizar(entrada.value);
   salidaNormalizar.textContent = limpio || "(vacío)";
@@ -41,5 +50,6 @@ function procesar() {
     `Rasgo más fuerte: ${fuerte.rasgo} (${fuerte.valor})`;
 }
 
+// Al importar el módulo: registra el listener (nunca se quita) y pinta el estado inicial.
 entrada.addEventListener("input", procesar);
 procesar();

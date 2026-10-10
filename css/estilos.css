@@ -1,4 +1,4 @@
-/* Estilos básicos. Los iremos mejorando clase por clase. */
+/* Estilos básicos del tablero. */
 body { font-family: system-ui, sans-serif; margin: 2rem; background: #f5f6fa; }
 .pipeline { display: flex; gap: 1rem; flex-wrap: wrap; }
 .estacion { flex: 1 1 150px; min-height: 120px; padding: 1rem; background: #fff; border: 2px solid #333; border-radius: 8px; }

@@ -4,6 +4,17 @@ import { ESTACIONES, resumen } from './estaciones.js';
 /* ==================================================================
    8 · RENDERER  (layered rendering + culling + LOD + sprites cacheados)
    ================================================================== */
+/**
+ * Dibuja el lienzo en capas: rejilla (cacheada en un canvas aparte), aristas, pulsos,
+ * nodos con su vista previa y la conexión en curso. Solo dibuja lo que cae en pantalla.
+ *
+ * @param {HTMLCanvasElement} canvas - El `#stage`.
+ * @param {GraphModel} graph
+ * @param {SimulationEngine} engine
+ * @param {{x:number, y:number, zoom:number}} camera - Centro de la vista en píxeles de mundo y zoom.
+ * @param {EventBus} bus - Escucha `NODE_MOVED`, `NODE_ADDED`, `NODE_REMOVED` y `NODE_UPDATED`
+ *   (reconstruir el índice espacial) y `CAMERA` (repintar la rejilla).
+ */
 export class Renderer {
   constructor(canvas, graph, engine, camera, bus) {
     this.canvas = canvas;
@@ -52,7 +63,7 @@ export class Renderer {
     return c;
   }
 
-  /* ---------- Resize ---------- */
+  /** Ajusta el tamaño interno del canvas a su tamaño en pantalla × devicePixelRatio (máximo 2). */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -66,6 +77,7 @@ export class Renderer {
   }
 
   /* ---------- Coordenadas ---------- */
+  // Conversión de coordenadas: w2s = mundo → pantalla, s2w = pantalla → mundo (píxeles CSS del canvas).
   w2sx(wx) { return (wx - this.cam.x) * this.cam.zoom + this.W * 0.5; }
   w2sy(wy) { return (wy - this.cam.y) * this.cam.zoom + this.H * 0.5; }
   s2wx(sx) { return (sx - this.W * 0.5) / this.cam.zoom + this.cam.x; }
@@ -112,6 +124,11 @@ export class Renderer {
     this._indexDirty = false;
   }
 
+  /**
+   * @param {number} wx
+   * @param {number} wy - Punto en píxeles de mundo.
+   * @returns {Object|null} El nodo que contiene el punto (el dibujado encima), o `null`.
+   */
   hitTestNode(wx, wy) {
     if (this._indexDirty) this._rebuildIndex();
     return this.spatial.hitTest(wx, wy);
@@ -120,6 +137,10 @@ export class Renderer {
   /* ================================================================
      RENDER PRINCIPAL
      ================================================================ */
+  /**
+   * Dibuja un fotograma completo.
+   * @param {number} dt - Segundos desde el fotograma anterior (este método no lo usa).
+   */
   render(dt) {
     const ctx = this.ctx;
     const { W, H, dpr } = this;
@@ -278,6 +299,15 @@ export class Renderer {
     for (const n of active) this._paintNode(ctx, n, z, lodText, lodPort, true);
   }
 
+  /**
+   * Dibuja una caja: halo, cuerpo, barra de color, puntos de umbral, textos, vista previa y puertos.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {Object} n - Nodo.
+   * @param {number} z - Zoom actual.
+   * @param {boolean} lodText - Dibujar textos (zoom >= `CFG.LOD_TEXT_ZOOM`).
+   * @param {boolean} lodPort - Dibujar puertos y umbral (zoom >= `CFG.LOD_PORT_ZOOM`).
+   * @param {boolean} withGlow - Dibujar el halo (nodos activos).
+   */
   _paintNode(ctx, n, z, lodText, lodPort, withGlow) {
     const sx = this.w2sx(n.x);
     const sy = this.w2sy(n.y);
@@ -389,10 +419,21 @@ export class Renderer {
   }
 
   /* ---------- VISTA PREVIA DE LA ESTACIÓN ---------- */
+  /**
+   * Escribe debajo de la caja una línea corta (máximo 34 caracteres): el error en rojo,
+   * "en desarrollo" en ámbar para estaciones pendientes o el `resumen()` de su salida.
+   * No dibuja nada si la caja todavía no tiene salida.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {Object} n - Nodo.
+   * @param {number} sx
+   * @param {number} sy - Esquina inferior izquierda de la caja en pantalla.
+   * @param {number} w - Ancho de la caja en pantalla.
+   * @param {number} z - Zoom actual.
+   */
   _paintPreview(ctx, n, sx, sy, w, z) {
     let texto = '', color = '#94a3b8';
     if (n.error)                         { texto = '⚠ ' + n.error; color = '#f87171'; }
-    else if (ESTACIONES[n.type]?.pendiente) { texto = '⏳ pendiente (próxima clase)'; color = '#fbbf24'; }
+    else if (ESTACIONES[n.type]?.pendiente) { texto = '⏳ en desarrollo'; color = '#fbbf24'; }
     else if (n.salida !== undefined)     { texto = resumen(n.salida); color = '#cbd5e1'; }
     if (!texto) return;
 
@@ -438,5 +479,9 @@ export class Renderer {
     }
   }
 
+  /**
+   * @param {{type:'connect', fromId:string, sx:number, sy:number, valid:boolean}|null} o -
+   *   Conexión que se está arrastrando (punta en pantalla) o `null` para quitarla.
+   */
   setOverlay(o) { this._overlay = o; }
 }

@@ -56,6 +56,15 @@ export function vectorPonderado(ficha) {
 }
 
 /**
+ * Redondea el peso a 4 decimales para conservar castigos pequeños como 0.025 o 0.0125.
+ * @param {number} n
+ * @returns {number}
+ */
+function redondearPeso(n) {
+  return Math.round(n * 10000) / 10000;
+}
+
+/**
  * Redondea a 2 decimales; `+ 0` evita -0.
  * @param {number} n
  * @returns {number}
@@ -69,8 +78,8 @@ function redondear(n) {
  * @property {string} token
  * @property {number} id
  * @property {Array<-1|0|1>} vector
- * @property {number} peso - 1, ×0.2 si es vacía, ×0.5 si es repetida.
- * @property {string} motivo - Ej. `"palabra vacía: preposición, repetida"`.
+ * @property {number} peso - 1 (o 0.2 si es vacía) × 0.5 por cada aparición anterior.
+ * @property {string} motivo - Ej. `"palabra vacía: preposición, repetida 2 veces"`.
  * @property {Array<number>} vectorPonderado - `vector` × `peso`.
  */
 
@@ -80,8 +89,8 @@ function redondear(n) {
  * @returns {Array<FichaCodificada>} En el mismo orden.
  */
 export function codificar(fichas) {
-  // Palabras ya vistas en esta frase, para castigar repeticiones.
-  const vistas = new Set();
+  // Cuántas veces apareció ya cada palabra en esta frase.
+  const apariciones = new Map();
 
   return fichas.map((ficha) => {
     let peso = PESO_BASE;
@@ -92,18 +101,19 @@ export function codificar(fichas) {
       peso *= CASTIGO_VACIA;
       razones.push(`palabra vacía: ${grupoDe(ficha.token)}`);
     }
-    // Regla 2: repetida, ×0.5 (se acumula: un "de" repetido queda en 0.1).
-    if (vistas.has(ficha.token)) {
-      peso *= CASTIGO_REPETIDA;
-      razones.push("repetida");
+    // Regla 2: ×0.5 por cada aparición anterior ("de": 0.2, 0.1, 0.05, 0.025...).
+    const previas = apariciones.get(ficha.token) ?? 0;
+    if (previas > 0) {
+      peso *= CASTIGO_REPETIDA ** previas;
+      razones.push(`repetida ${previas} ${previas === 1 ? "vez" : "veces"}`);
     }
-    // Se registra después de revisar, así la primera aparición no cuenta como repetida.
-    vistas.add(ficha.token);
+    // Se cuenta después de revisar, así la primera aparición no cuenta como repetida.
+    apariciones.set(ficha.token, previas + 1);
 
     // Objeto nuevo para no modificar las fichas del tokenizador.
     const nueva = {
       ...ficha,
-      peso: redondear(peso),
+      peso: redondearPeso(peso),
       motivo: razones.length ? razones.join(", ") : "con significado",
     };
     nueva.vectorPonderado = vectorPonderado(nueva);

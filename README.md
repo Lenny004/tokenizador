@@ -44,7 +44,7 @@ Como el proyecto usa módulos de JavaScript (`import`), hay que abrirlo con un s
 1. Abre `index.html` con Live Server.
 2. Escribe una frase en **Texto natural**.
 
-Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno). La **Predicción estocástica** busca primero en la base vectorial: la frase se parece en un 86.4 % a "Quiero pupusas de queso" y responde `¡Claro! Sus pupusas van con curtido y salsa.` en el panel **Texto**. Con "Diséñame una web html" la respuesta es código HTML y aparece en el panel **Código**. Si la frase no se parece a ningún ejemplo (similitud menor que 0.4), responde la red neuronal palabra por palabra; por ejemplo, "quiero pupusas de queso" sola, sin la base, da `con curtido y salsa`.
+Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1 (`repetida 1 vez`). Cada repetición vuelve a dividir el peso entre 2: un tercer `de` pesaría 0.05 y un cuarto 0.025. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno). La **Predicción estocástica** busca primero en la base vectorial: la frase se parece en un 86.4 % a "Quiero pupusas de queso" y responde `¡Claro! Sus pupusas van con curtido y salsa.` en el panel **Texto**. Con "Diséñame una web html" la respuesta es código HTML y aparece en el panel **Código**. Si la frase no se parece a ningún ejemplo (similitud menor que 0.4), responde la red neuronal palabra por palabra; por ejemplo, "quiero pupusas de queso" sola, sin la base, da `con curtido y salsa`.
 
 La barra **Temperatura** (0.1 a 2) de la estación 6 cambia qué tan arriesgada es la respuesta: baja = siempre la palabra más probable, alta = más variedad.
 
@@ -75,6 +75,7 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   └── ejemplos.js         # copia de ejemplos.json como módulo JS (el navegador lo importa sin fetch)
 ├── pruebas/
 │   ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
+│   ├── codificador.js      # prueba el castigo progresivo por repetición de la estación 4
 │   ├── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
 │   ├── vectores.js         # prueba la base vectorial: búsqueda, paráfrasis, umbral y respaldo
 │   └── red.js              # prueba softmax, temperatura, entrenamiento y predicción de la estación 6
@@ -98,12 +99,15 @@ Requiere [Node.js](https://nodejs.org/) para correrlas desde la terminal:
 
 ```bash
 node pruebas/pesos-aprendidos.js
+node pruebas/codificador.js
 node pruebas/liquido.js
 node pruebas/red.js
 node pruebas/vectores.js
 ```
 
 `pesos-aprendidos.js` simula vectores ya aprendidos por la red y compara "de" y "pupusas" sin castigo y con el codificador: "de" pasa de `[0.3, -0.1, 0.4]` a `[0.06, -0.02, 0.08]`.
+
+`codificador.js` revisa el castigo progresivo: en "quiero de queso de frijol de revuelta de" los `de` pesan 0.2, 0.1, 0.05 y 0.025; "pupusas" repetida pesa 1, 0.5 y 0.25, y el motivo dice `repetida 2 veces`.
 
 `liquido.js` revisa la estación 5: "quiero pupusas de queso" da `[0.31, -0.31, 0.63]` (ok, rasgo más fuerte: desayuno), "de y de" da `[0, 0, 0]` (sin significado) y una frase vacía da `[0, 0, 0]` (vacío), sin `NaN`.
 

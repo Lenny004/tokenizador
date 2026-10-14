@@ -15,7 +15,7 @@ export const NO_ENTENDI = "No entendí la pregunta.";
  */
 export function vectorDisperso(frase) {
   const vector = new Map();
-  // Suma los pesos: las palabras vacías (0.2) y repetidas cuentan menos.
+  // Suma los pesos: las palabras vacías (0.2) y cada repetición (×0.5) cuentan menos.
   for (const f of codificar(tokenizar(normalizar(frase)))) {
     vector.set(f.token, (vector.get(f.token) ?? 0) + f.peso);
   }

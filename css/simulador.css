@@ -321,3 +321,4 @@
   }
   .salida-estacion.pendiente{color:var(--amber);}
   .salida-estacion.error{color:#f87171;}
+  .enlace input[type=range]{width:80px;vertical-align:middle;accent-color:var(--accent);}

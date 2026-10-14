@@ -1,4 +1,26 @@
 {
   "preguntas": [],
-  "respuestas": []
+  "respuestas": [],
+  "entrenamiento": [
+    {
+      "frase": "quiero pupusas de queso",
+      "respuesta": "con curtido y salsa <fin>"
+    },
+    {
+      "frase": "quiero",
+      "respuesta": "cafe pan <fin>"
+    },
+    {
+      "frase": "pupusas",
+      "respuesta": "revueltas chicharron <fin>"
+    },
+    {
+      "frase": "queso",
+      "respuesta": "frijol queso <fin>"
+    },
+    {
+      "frase": "por favor",
+      "respuesta": "listo <fin>"
+    }
+  ]
 }

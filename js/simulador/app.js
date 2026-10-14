@@ -4,7 +4,7 @@ import { NodeFactory, GraphModel } from './grafo.js';
 import { SimState, SimulationEngine } from './motor.js';
 import { Renderer } from './render.js';
 import { Controller, Inspector, ToastManager } from './interfaz.js';
-import { ejecutarEstacion } from './estaciones.js';
+import { ejecutarEstacion, OPCIONES_RED } from './estaciones.js';
 
 // Tipos genéricos que agrega el botón "Neurona" (no son estaciones).
 const TIPOS_GENERICOS = ['neuron', 'logic', 'memory', 'action'];
@@ -58,6 +58,8 @@ export class NeuroFlowApp {
       fps:    document.getElementById('stat-fps'),
       led:    document.getElementById('led-sim'),
       entrada: document.getElementById('entrada-sim'),
+      temp:    document.getElementById('temp-sim'),
+      tempVal: document.getElementById('temp-sim-valor'),
     };
   }
 
@@ -82,6 +84,12 @@ export class NeuroFlowApp {
     });
 
     d.illum.addEventListener('click', () => this.engine.illuminate());
+
+    // Temperatura de la estación 6: se usa en el siguiente Play.
+    d.temp.addEventListener('input', () => {
+      OPCIONES_RED.temperatura = Number(d.temp.value);
+      d.tempVal.textContent = OPCIONES_RED.temperatura.toFixed(1);
+    });
 
     d.fit.addEventListener('click', () => this.fitView());
 

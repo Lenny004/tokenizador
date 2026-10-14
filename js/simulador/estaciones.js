@@ -3,9 +3,15 @@ import { normalizar } from '../normalizar.js';
 import { tokenizar } from '../tokenizador.js';
 import { codificar } from '../codificador.js';
 import { licuar, rasgoMasFuerte } from '../liquido.js';
+import { crearRed, entrenar, predecir } from '../red.js';
+import { ENTRENAMIENTO } from '../../data/ejemplos.js';
 
-// Para estaciones sin implementar: devuelve el dato igual.
-const pasarIgual = (dato) => dato;
+// Red de la estación 6: se entrena una vez al importar el módulo (semilla fija).
+const red = crearRed(7);
+entrenar(red, ENTRENAMIENTO);
+
+/** Opciones de la predicción; `app.js` cambia `temperatura` con el control de la barra. */
+export const OPCIONES_RED = { temperatura: 0.7 };
 
 /**
  * @typedef {Object} Estacion
@@ -38,8 +44,15 @@ export const ESTACIONES = {
     },
     pendiente: false,
   },
-  prediccion:  { procesar: pasarIgual, pendiente: true },
-  salida:      { procesar: pasarIgual, pendiente: false },
+  prediccion: {
+    procesar: (mezcla) => {
+      if (!esMezcla(mezcla)) throw new Error('La predicción necesita la mezcla (¿está conectada después del Ternario líquido?)');
+      return predecir(red, mezcla, { temperatura: OPCIONES_RED.temperatura });
+    },
+    pendiente: false,
+  },
+  // Salida muestra el texto generado; cualquier otro dato pasa igual.
+  salida:      { procesar: (dato) => (esPrediccion(dato) ? dato.texto : dato), pendiente: false },
 };
 
 /**
@@ -73,11 +86,15 @@ export function resumen(dato) {
     return dato.map((f) => ('peso' in f ? `${f.token}·${f.peso}` : `${f.token}#${f.id}`)).join(' ');
   }
   if (esMezcla(dato)) return `[${dato.vector.join(', ')}] · ${dato.estado}`;
+  if (esPrediccion(dato)) return `"${dato.texto}"`;
   return JSON.stringify(dato);
 }
 
 // Detecta la salida del ternario líquido.
 const esMezcla = (dato) => dato && Array.isArray(dato.vector) && 'estado' in dato;
+
+// Detecta la salida de la red (estación 6).
+const esPrediccion = (dato) => dato && Array.isArray(dato.pasos) && typeof dato.texto === 'string';
 
 /**
  * Texto largo para el inspector.
@@ -101,6 +118,12 @@ export function detalle(dato) {
            `nota       ${dato.nota}\n` +
            `peso total ${dato.pesoTotal}\n` +
            `más fuerte ${fuerte.rasgo} (${fuerte.valor})`;
+  }
+  if (esPrediccion(dato)) {
+    // Una línea por paso: palabra elegida y las 3 más probables.
+    const pasos = dato.pasos.map((p, i) =>
+      `${i + 1}. ${p.token.padEnd(10)} ` + p.top3.map((o) => `${o.token} ${(o.probabilidad * 100).toFixed(1)}%`).join(', '));
+    return `"${dato.texto}"\n\n` + pasos.join('\n');
   }
   return JSON.stringify(dato, null, 2);
 }

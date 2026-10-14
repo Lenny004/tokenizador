@@ -13,6 +13,7 @@
 - **Simulador visual**: en `simulador.html` las estaciones son cajas conectadas, y al pulsar Play el pulso recorre la línea y cada caja calcula su paso real.
 - **Pensado para el español**: conserva la ñ ("año" no es "ano") y une palabras con y sin tilde o diéresis ("pingüino" = "pinguino").
 - **Palabras vacías ordenadas por tipo**: artículos, preposiciones, conjunciones, contracciones, pronombres y demostrativos tienen cada uno su arreglo.
+- **Una red neuronal que se entiende**: una sola capa lineal con softmax y temperatura genera la respuesta palabra por palabra, y muestra las 3 opciones más probables de cada paso.
 - **Sin instalar nada**: HTML, CSS y JavaScript puro, sin dependencias.
 
 <!-- section:overview -->
@@ -42,9 +43,11 @@ Como el proyecto usa módulos de JavaScript (`import`), hay que abrirlo con un s
 1. Abre `index.html` con Live Server.
 2. Escribe una frase en **Texto natural**.
 
-Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno).
+Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno). La **Predicción estocástica** responde `con curtido y salsa` (con temperatura 0.7, el primer paso elige "con" con 97.4 %). Con la frase por defecto del tablero ("…por favor!!") la red elige `<fin>` de inmediato y no genera texto: no tiene ejemplos de entrenamiento parecidos.
 
-Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pulsa **Play** y haz clic en una caja para ver su salida en el panel derecho.
+La barra **Temperatura** (0.1 a 2) de la estación 6 cambia qué tan arriesgada es la respuesta: baja = siempre la palabra más probable, alta = más variedad.
+
+Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pulsa **Play** y haz clic en una caja para ver su salida en el panel derecho. El control **T** de la barra ajusta la temperatura para el siguiente Play.
 
 <!-- section:structure -->
 ## 🗂️ Estructura del proyecto
@@ -62,15 +65,17 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   ├── tokenizador.js      # estación 3: vocabulario, IDs y vectores de -1, 0 y +1
 │   ├── codificador.js      # estación 4: pesos, palabras vacías por tipo y repetidas
 │   ├── liquido.js          # estación 5: licúa los vectores ponderados en uno solo (promedio ponderado)
-│   ├── red.js              # estación 6: pendiente
+│   ├── red.js              # estación 6: red lineal + softmax, entrenamiento y predicción token a token
 │   ├── vectores.js         # base de datos vectorial: pendiente
 │   ├── simulador.js        # arranca el simulador
 │   └── simulador/          # núcleo (EventBus), grafo, motor, dibujo, interfaz, app y registro de estaciones
 ├── data/
-│   └── ejemplos.json       # preguntas y respuestas de ejemplo (todavía vacío)
+│   ├── ejemplos.json       # preguntas y respuestas de ejemplo; "entrenamiento" tiene los pares de la red
+│   └── ejemplos.js         # los mismos pares como módulo JS (el navegador lo importa sin fetch)
 ├── pruebas/
 │   ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
-│   └── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
+│   ├── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
+│   └── red.js              # prueba softmax, temperatura, entrenamiento y predicción de la estación 6
 └── skills/                 # guías de documentación del proyecto: README y JSDoc
 ```
 
@@ -92,11 +97,14 @@ Requiere [Node.js](https://nodejs.org/) para correrlas desde la terminal:
 ```bash
 node pruebas/pesos-aprendidos.js
 node pruebas/liquido.js
+node pruebas/red.js
 ```
 
 `pesos-aprendidos.js` simula vectores ya aprendidos por la red y compara "de" y "pupusas" sin castigo y con el codificador: "de" pasa de `[0.3, -0.1, 0.4]` a `[0.06, -0.02, 0.08]`.
 
 `liquido.js` revisa la estación 5: "quiero pupusas de queso" da `[0.31, -0.31, 0.63]` (ok, rasgo más fuerte: desayuno), "de y de" da `[0, 0, 0]` (sin significado) y una frase vacía da `[0, 0, 0]` (vacío), sin `NaN`.
+
+`red.js` revisa la estación 6: que `ejemplos.js` y `ejemplos.json` tengan los mismos pares, que softmax sume 1, que con temperatura 0.1 la opción más probable pase de 0.95, que la pérdida baje al entrenar (de 2.803 a 0.069) y que "quiero pupusas de queso" responda `con curtido y salsa`.
 
 <!-- section:roadmap -->
 ## 🗺️ Hoja de ruta y estado
@@ -106,7 +114,7 @@ node pruebas/liquido.js
 - [x] Estación 4: codificador
 - [x] Simulador visual conectado a las estaciones
 - [x] Estación 5: ternario líquido
-- [ ] Estación 6: red neuronal con softmax, temperatura y predicción token a token
+- [x] Estación 6: red neuronal con softmax, temperatura y predicción token a token
 - [ ] Base de datos vectorial (10 formas de cada pregunta y de cada respuesta)
 - [ ] Salida de texto y código, y detector de errores de lógica en JS
 

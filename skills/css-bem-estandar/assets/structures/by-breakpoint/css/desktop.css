@@ -1,0 +1,15 @@
+/*
+ * desktop.css: desde 1024px. Solo lo que cambia respecto a tablet.css.
+ * Breakpoints (iguales en todos los archivos): tablet 768px, desktop 1024px.
+ */
+@layer components {
+  @media (min-width: 1024px) {
+    .navbar {
+      padding-inline: max(var(--container-padding), (100% - var(--container-max)) / 2);
+    }
+
+    .navbar__list {
+      gap: var(--space-lg);
+    }
+  }
+}

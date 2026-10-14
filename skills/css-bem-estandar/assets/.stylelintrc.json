@@ -1,0 +1,86 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "reportNeedlessDisables": true,
+  "reportInvalidScopeDisables": true,
+  "rules": {
+    "selector-class-pattern": [
+      "^(?!js-)(?:(?:is|has)-[a-z0-9]+(?:-[a-z0-9]+)*|[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?)$",
+      {
+        "resolveNestedSelectors": true,
+        "message": "Clase \"%s\" no cumple BEM: .bloque, .bloque__elemento, .bloque--modificador (kebab-case, sin elementos anidados). Estados con is-/has-; los hooks js-* no llevan estilos."
+      }
+    ],
+    "selector-max-id": 0,
+    "declaration-no-important": true,
+    "selector-max-specificity": [
+      "0,1,0",
+      {
+        "ignoreSelectors": [
+          ":hover", ":focus", ":focus-visible", ":focus-within", ":active", ":visited",
+          ":link", ":any-link", ":disabled", ":enabled", ":checked", ":indeterminate",
+          ":invalid", ":valid", ":user-invalid", ":user-valid", ":required", ":optional",
+          ":read-only", ":read-write", ":placeholder-shown", ":target", ":open",
+          ":popover-open", ":modal", ":first-child", ":last-child", ":only-child",
+          ":nth-child", ":nth-last-child", ":first-of-type", ":last-of-type",
+          ":only-of-type", ":nth-of-type", ":nth-last-of-type", ":empty", ":host",
+          "::before", "::after", "::placeholder", "::marker", "::selection",
+          "::backdrop", "::file-selector-button", "::first-line", "::first-letter",
+          "/^\\.(is|has)-/",
+          "/^\\[aria-/",
+          "/^\\[(disabled|open|hidden)\\]$/"
+        ]
+      }
+    ],
+    "selector-max-compound-selectors": 3,
+    "selector-no-qualifying-type": [true, { "ignore": ["attribute"] }],
+    "max-nesting-depth": [2, { "ignore": ["pseudo-classes"] }],
+    "color-named": "never",
+    "color-no-hex": true,
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch"],
+    "declaration-property-unit-disallowed-list": {
+      "font-size": ["px"],
+      "line-height": ["px", "rem", "em"],
+      "letter-spacing": ["px"],
+      "/^(margin|padding|gap|row-gap|column-gap)/": ["px"]
+    },
+    "declaration-property-value-disallowed-list": {
+      "transition": ["/\\ball\\b/"],
+      "transition-property": ["/\\ball\\b/"]
+    },
+    "property-disallowed-list": [
+      "/^(margin|padding)-(left|right|top|bottom)$/",
+      "/^border-(left|right)(-|$)/"
+    ],
+    "media-feature-range-notation": "prefix",
+    "selector-pseudo-class-no-unknown": [true, { "ignorePseudoClasses": ["global", "local", "deep"] }],
+    "no-descending-specificity": [true, { "ignore": ["selectors-within-list"] }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*tokens*.css",
+        "**/*themes*.css",
+        "**/*primitives*.css",
+        "**/*semantic*.css",
+        "**/*variables*.css",
+        "**/tokens/**/*.css"
+      ],
+      "rules": {
+        "color-named": null,
+        "color-no-hex": null,
+        "function-disallowed-list": null
+      }
+    },
+    {
+      "files": ["**/*.module.css"],
+      "rules": {
+        "selector-class-pattern": [
+          "^(?!js-)[a-z][a-zA-Z0-9]*(?:(?:__|--|-)[a-zA-Z0-9]+)*$",
+          {
+            "message": "CSS Modules: clase \"%s\" en camelCase o kebab-case (el archivo es el bloque)."
+          }
+        ]
+      }
+    }
+  ]
+}

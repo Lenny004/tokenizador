@@ -1,0 +1,54 @@
+/*
+ * Card.module.css: el archivo es el bloque (BEM adaptado a CSS Modules).
+ * .card es la raíz, el resto son elementos y .featured es el modificador (vía clsx).
+ * Los modificadores solo cambian variables locales (--card-*).
+ */
+.card {
+  --card-padding: var(--space-md);
+  --card-border-color: var(--color-border);
+  --card-shadow: var(--shadow-sm);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width) solid var(--card-border-color);
+  border-radius: var(--radius-lg);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  box-shadow: var(--card-shadow);
+}
+
+.media {
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--card-padding);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.price {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.featured {
+  --card-border-color: var(--color-primary);
+  --card-shadow: var(--shadow-lg);
+}

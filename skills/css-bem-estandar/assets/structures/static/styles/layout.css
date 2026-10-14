@@ -1,0 +1,20 @@
+/*
+ * layout.css: objetos de maquetación sin estética (contenedor y rejilla).
+ * Se combinan con bloques mediante mixes, p. ej. class="card grid__item".
+ */
+@layer layout {
+  .container {
+    inline-size: min(100% - 2 * var(--container-padding), var(--container-max));
+    margin-inline: auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
+    gap: var(--space-lg);
+  }
+
+  .grid__item {
+    min-inline-size: 0;
+  }
+}

@@ -9,17 +9,17 @@ import { ENTRENAMIENTO, PREGUNTAS, RESPUESTAS } from "../data/ejemplos.js";
 
 // Se lee #entrada; se escribe en el .resultado de cada estación.
 const entrada = document.querySelector("#entrada");
-const salidaNormalizar = document.querySelector("#normalizar .resultado");
-const salidaTokens = document.querySelector("#tokenizador .resultado");
-const salidaPesos = document.querySelector("#codificador .resultado");
-const salidaLiquido = document.querySelector("#ternario-liquido .resultado");
+const salidaNormalizar = document.querySelector("#normalizar .output");
+const salidaTokens = document.querySelector("#tokenizador .output");
+const salidaPesos = document.querySelector("#codificador .output");
+const salidaLiquido = document.querySelector("#ternario-liquido .output");
 const temperatura = document.querySelector("#temperatura");
 const valorTemperatura = document.querySelector("#valor-temperatura");
-const salidaTexto = document.querySelector("#prediccion .texto-generado");
-const salidaPasos = document.querySelector("#prediccion .pasos");
-const salidaBusqueda = document.querySelector("#prediccion .busqueda");
-const panelTexto = document.querySelector("#salida-texto .resultado");
-const panelCodigo = document.querySelector("#salida-codigo code");
+const salidaTexto = document.querySelector("#prediccion .output--generated");
+const salidaPasos = document.querySelector("#prediccion .output--steps");
+const salidaBusqueda = document.querySelector("#prediccion .output--search");
+const panelTexto = document.querySelector("#salida-texto .output");
+const panelCodigo = document.querySelector("#salida-codigo .output__code");
 
 // Estación 6: la red se entrena una sola vez al cargar (semilla fija, siempre igual).
 const red = crearRed(7);

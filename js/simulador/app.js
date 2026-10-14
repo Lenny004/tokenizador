@@ -143,14 +143,14 @@ export class NeuroFlowApp {
   _wireBusObservers() {
     this.bus.on(EVT.SIM_STATE, (state) => {
       const running = state === SimState.RUNNING;
-      this.dom.play.classList.toggle('running', running);
+      this.dom.play.classList.toggle('is-running', running);
       this.dom.play.querySelector('svg').innerHTML = running
         ? '<rect x="6" y="4" width="4" height="16" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" fill="currentColor" stroke="none"/>'
         : '<polygon points="6,4 20,12 6,20" fill="currentColor" stroke="none"/>';
       this.dom.play.childNodes[1].nodeValue = running ? ' Ejecutando' : ' Play';
       this.dom.pause.disabled = !running;
       this.dom.state.textContent = state;
-      this.dom.led.classList.toggle('on', running);
+      this.dom.led.classList.toggle('is-on', running);
     });
 
     this.bus.on(EVT.GRAPH_CHANGED, () => {
@@ -269,4 +269,3 @@ export class NeuroFlowApp {
 
   hitTestNode(wx, wy) { return this.renderer.hitTestNode(wx, wy); }
 }
-

@@ -1,0 +1,88 @@
+/*
+ * themes.css: los temas SOLO redefinen tokens semánticos de tokens.css.
+ * Nunca se duplican reglas de componentes por tema. Cargar después de tokens.css.
+ * El atributo data-theme va en <html>; un script inline en <head> lo aplica
+ * desde localStorage antes del primer pintado (ver references/tokens.md).
+ * Dos modelos (pueden convivir; lo normal es usar uno y borrar el otro):
+ *   A) Claro/oscuro: sigue prefers-color-scheme salvo que el usuario fije data-theme light o dark.
+ *   B) Paletas seleccionables: data-theme con el nombre de la paleta (ocean, grape...).
+ * Contraste WCAG AA verificado en cada tema (texto 4.5:1, foco y UI 3:1).
+ */
+@layer tokens {
+  /* ---- Modelo A: oscuro automático (solo si el usuario no eligió tema) ---- */
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme])) {
+      color-scheme: dark;
+
+      --color-primary: var(--blue-400);
+      --color-primary-hover: var(--blue-300);
+      --color-on-primary: var(--gray-950);
+      --color-secondary: var(--violet-400);
+      --color-secondary-hover: var(--violet-300);
+      --color-on-secondary: var(--gray-950);
+      --color-bg: var(--gray-950);
+      --color-surface: var(--gray-900);
+      --color-text: var(--gray-50);
+      --color-text-muted: var(--gray-400);
+      --color-success: var(--green-400);
+      --color-warning: var(--amber-300);
+      --color-danger: var(--red-400);
+      --color-info: var(--sky-300);
+      --color-border: var(--alpha-white-16);
+      --color-focus: var(--blue-300);
+    }
+  }
+
+  /* ---- Modelo A: oscuro elegido por el usuario (mismos valores que arriba) ---- */
+  [data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-primary: var(--blue-400);
+    --color-primary-hover: var(--blue-300);
+    --color-on-primary: var(--gray-950);
+    --color-secondary: var(--violet-400);
+    --color-secondary-hover: var(--violet-300);
+    --color-on-secondary: var(--gray-950);
+    --color-bg: var(--gray-950);
+    --color-surface: var(--gray-900);
+    --color-text: var(--gray-50);
+    --color-text-muted: var(--gray-400);
+    --color-success: var(--green-400);
+    --color-warning: var(--amber-300);
+    --color-danger: var(--red-400);
+    --color-info: var(--sky-300);
+    --color-border: var(--alpha-white-16);
+    --color-focus: var(--blue-300);
+  }
+
+  /* data-theme light no necesita regla: usa los valores por defecto de tokens.css. */
+
+  /* ---- Modelo B: paletas seleccionables ---- */
+  [data-theme="ocean"] {
+    --color-primary: var(--teal-700);
+    --color-primary-hover: var(--teal-800);
+    --color-on-primary: var(--white);
+    --color-secondary: var(--blue-600);
+    --color-secondary-hover: var(--blue-700);
+    --color-on-secondary: var(--white);
+    --color-bg: var(--teal-50);
+    --color-surface: var(--white);
+    --color-text: var(--gray-900);
+    --color-text-muted: var(--gray-600);
+    --color-focus: var(--teal-700);
+  }
+
+  [data-theme="grape"] {
+    --color-primary: var(--violet-700);
+    --color-primary-hover: var(--violet-800);
+    --color-on-primary: var(--white);
+    --color-secondary: var(--teal-700);
+    --color-secondary-hover: var(--teal-800);
+    --color-on-secondary: var(--white);
+    --color-bg: var(--violet-50);
+    --color-surface: var(--white);
+    --color-text: var(--gray-900);
+    --color-text-muted: var(--gray-600);
+    --color-focus: var(--violet-700);
+  }
+}

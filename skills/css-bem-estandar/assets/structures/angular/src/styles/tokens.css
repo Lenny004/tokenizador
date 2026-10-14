@@ -1,0 +1,163 @@
+/*
+ * tokens.css: design tokens en dos niveles.
+ * 1) Primitivos: la paleta cruda (--blue-600). Nunca se usan en componentes.
+ * 2) Semánticos: el significado (--color-primary). Lo único que usan los componentes
+ *    y lo único que redefinen los temas (themes.css).
+ * Base 62.5% (1rem = 10px) para pensar en rem sin cálculos y respetar el
+ * tamaño de fuente que elija el usuario en su navegador.
+ * Breakpoints (las media queries no aceptan var()): tablet 768px, desktop 1024px, wide 1280px.
+ */
+@layer tokens {
+  :root {
+    /* ---- Primitivos: color ---- */
+    --white: oklch(100% 0 0deg);
+    --black: oklch(0% 0 0deg);
+    --gray-50: oklch(98.5% 0.002 247deg);
+    --gray-100: oklch(96.7% 0.003 265deg);
+    --gray-200: oklch(92.8% 0.006 265deg);
+    --gray-300: oklch(87.2% 0.01 258deg);
+    --gray-400: oklch(70.7% 0.022 261deg);
+    --gray-500: oklch(55.1% 0.027 264deg);
+    --gray-600: oklch(44.6% 0.03 257deg);
+    --gray-700: oklch(37.3% 0.034 260deg);
+    --gray-800: oklch(27.8% 0.033 256deg);
+    --gray-900: oklch(21% 0.034 265deg);
+    --gray-950: oklch(13% 0.028 262deg);
+    --blue-300: oklch(80.9% 0.105 251deg);
+    --blue-400: oklch(70.7% 0.165 254deg);
+    --blue-600: oklch(54.6% 0.245 263deg);
+    --blue-700: oklch(48.8% 0.243 264deg);
+    --violet-50: oklch(96.9% 0.016 293deg);
+    --violet-300: oklch(81.1% 0.111 293deg);
+    --violet-400: oklch(70.2% 0.183 293deg);
+    --violet-600: oklch(54.1% 0.281 293deg);
+    --violet-700: oklch(49.1% 0.27 293deg);
+    --violet-800: oklch(43.2% 0.232 292deg);
+    --green-400: oklch(79.2% 0.209 152deg);
+    --green-700: oklch(52.7% 0.154 150deg);
+    --amber-300: oklch(87.9% 0.169 92deg);
+    --amber-800: oklch(47.3% 0.137 46deg);
+    --red-400: oklch(70.4% 0.191 22deg);
+    --red-600: oklch(57.7% 0.245 27deg);
+    --red-700: oklch(50.5% 0.213 27deg);
+    --sky-300: oklch(82.8% 0.111 230deg);
+    --sky-700: oklch(50% 0.134 242deg);
+    --teal-50: oklch(98.4% 0.014 181deg);
+    --teal-300: oklch(85.5% 0.138 181deg);
+    --teal-700: oklch(51.1% 0.096 186deg);
+    --teal-800: oklch(43.7% 0.078 189deg);
+    --alpha-white-16: oklch(100% 0 0deg / 16%);
+    --alpha-black-12: oklch(0% 0 0deg / 12%);
+
+    /* ---- Semánticos: color (tema claro por defecto) ---- */
+    color-scheme: light;
+
+    --color-primary: var(--blue-600);
+    --color-primary-hover: var(--blue-700);
+    --color-on-primary: var(--white);
+    --color-secondary: var(--violet-600);
+    --color-secondary-hover: var(--violet-700);
+    --color-on-secondary: var(--white);
+    --color-bg: var(--gray-50);
+    --color-surface: var(--white);
+    --color-text: var(--gray-900);
+    --color-text-muted: var(--gray-600);
+    --color-success: var(--green-700);
+    --color-warning: var(--amber-800);
+    --color-danger: var(--red-700);
+    --color-info: var(--sky-700);
+    --color-border: var(--alpha-black-12);
+    --color-focus: var(--blue-600);
+
+    /* ---- Tipografía ---- */
+    font-size: 62.5%;
+
+    --font-family-base: system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue", arial, sans-serif;
+    --font-family-mono: ui-monospace, "SFMono-Regular", menlo, consolas, monospace;
+    --font-size-xs: 1rem;
+    --font-size-sm: 1.4rem;
+    --font-size-md: 1.6rem;
+    --font-size-lg: 1.8rem;
+    --font-size-xl: 2.4rem;
+    --font-size-2xl: clamp(2.8rem, 2.2rem + 1.6vw, 3.6rem);
+    --font-size-3xl: clamp(3.2rem, 2.4rem + 2.4vw, 4.8rem);
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+    --line-height-tight: 1.2;
+    --line-height-base: 1.5;
+    --line-height-loose: 1.8;
+
+    /* ---- Espaciado ---- */
+    --space-xs: 0.4rem;
+    --space-sm: 0.8rem;
+    --space-md: 1.6rem;
+    --space-lg: 2.4rem;
+    --space-xl: 3.2rem;
+    --space-2xl: 4.8rem;
+
+    /* ---- Iconos ---- */
+    --icon-size-sm: 1.6rem;
+    --icon-size-md: 2.2rem;
+    --icon-size-lg: 3.2rem;
+
+    /* ---- Bordes y radios ---- */
+    --border-width: 1px;
+    --border: var(--border-width) solid var(--color-border);
+    --radius-sm: 0.4rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.6rem;
+    --radius-full: 9999px;
+
+    /* ---- Sombras ---- */
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px 0 rgb(0 0 0 / 6%);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -2px rgb(0 0 0 / 5%);
+
+    /* ---- Animación ---- */
+    --transition-fast: 150ms;
+    --transition-base: 250ms;
+    --transition-slow: 400ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+    /* ---- Capas (z-index) ---- */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-modal: 300;
+    --z-toast: 400;
+
+    /* ---- Layout ---- */
+    --container-max: 120rem;
+    --container-padding: clamp(1.6rem, 4vw, 3.2rem);
+    --header-height: 6.4rem;
+    --tap-target-min: 4.4rem;
+
+    /* ---- Accesibilidad / estados ---- */
+    --focus-ring-width: 0.3rem;
+    --focus-ring-offset: 0.2rem;
+    --focus-ring: var(--focus-ring-width) solid var(--color-focus);
+    --opacity-disabled: 0.5;
+  }
+
+  /* Sin animaciones para quien lo pide: los componentes usan estos tokens. */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --transition-fast: 0ms;
+      --transition-base: 0ms;
+      --transition-slow: 0ms;
+    }
+  }
+
+  /* Impresión: máximo contraste y sin fondos que gasten tinta. */
+  @media print {
+    :root {
+      --color-bg: var(--white);
+      --color-surface: var(--white);
+      --color-text: var(--black);
+      --color-text-muted: var(--black);
+      --shadow-sm: none;
+      --shadow-md: none;
+      --shadow-lg: none;
+    }
+  }
+}

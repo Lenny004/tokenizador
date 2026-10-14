@@ -1,0 +1,76 @@
+---
+// El componente es el bloque: BEM completo dentro de su <style> scoped.
+interface Props {
+  title: string;
+  text?: string;
+  price?: string;
+  image?: string;
+  alt?: string;
+  featured?: boolean;
+}
+
+const { title, text, price, image, alt = '', featured = false } = Astro.props;
+---
+
+<article class:list={['card', { 'card--featured': featured }]}>
+  {image && <img class="card__media" src={image} alt={alt} loading="lazy" />}
+  <div class="card__body">
+    <h3 class="card__title">{title}</h3>
+    {text && <p class="card__text">{text}</p>}
+    {price && <p class="card__price">{price}</p>}
+    <slot />
+  </div>
+</article>
+
+<style>
+  /* Los modificadores solo cambian variables locales (--card-*). */
+  .card {
+    --card-padding: var(--space-md);
+    --card-border-color: var(--color-border);
+    --card-shadow: var(--shadow-sm);
+
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: var(--border-width) solid var(--card-border-color);
+    border-radius: var(--radius-lg);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    box-shadow: var(--card-shadow);
+  }
+
+  .card__media {
+    inline-size: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--card-padding);
+  }
+
+  .card__title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+  }
+
+  .card__text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+
+  .card__price {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .card--featured {
+    --card-border-color: var(--color-primary);
+    --card-shadow: var(--shadow-lg);
+  }
+</style>

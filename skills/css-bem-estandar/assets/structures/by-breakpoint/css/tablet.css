@@ -1,0 +1,22 @@
+/*
+ * tablet.css: desde 768px. Solo lo que cambia respecto a base.css.
+ * Breakpoints (iguales en todos los archivos): tablet 768px, desktop 1024px.
+ */
+@layer components {
+  @media (min-width: 768px) {
+    .navbar__toggle {
+      display: none;
+    }
+
+    .navbar__menu {
+      display: block;
+      flex-basis: auto;
+      padding-block-end: 0;
+    }
+
+    .navbar__list {
+      flex-direction: row;
+      gap: var(--space-md);
+    }
+  }
+}

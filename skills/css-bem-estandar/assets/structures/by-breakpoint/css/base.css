@@ -1,0 +1,143 @@
+/*
+ * base.css: TODO el estilo mobile-first, sin media queries.
+ * tablet.css y desktop.css solo añaden lo mínimo que cambia en cada breakpoint.
+ * Breakpoints (iguales en todos los archivos): tablet 768px, desktop 1024px.
+ */
+@layer base {
+  body {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-base);
+    color: var(--color-text);
+    background-color: var(--color-bg);
+  }
+
+  h1,
+  h2,
+  h3 {
+    line-height: var(--line-height-tight);
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+  h2 {
+    font-size: var(--font-size-2xl);
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+  }
+
+  a {
+    color: var(--color-primary);
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    color: var(--color-primary-hover);
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-family-mono);
+  }
+
+  /* Un solo anillo de foco para todo el sitio: visible y con contraste en cada tema. */
+  :focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media print {
+    :where(a[href^="http"])::after {
+      content: " (" attr(href) ")";
+    }
+  }
+}
+
+@layer components {
+  .navbar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: var(--header-height);
+    padding-inline: var(--container-padding);
+    border-block-end: var(--border);
+    background-color: var(--color-surface);
+  }
+
+  .navbar__brand {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .navbar__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tap-target-min);
+    min-block-size: var(--tap-target-min);
+    padding: 0;
+    border: var(--border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    background-color: transparent;
+  }
+
+  .navbar__icon {
+    inline-size: var(--icon-size-md);
+    block-size: var(--icon-size-md);
+  }
+
+  /* Oculto en móvil hasta que el botón añade is-open (y aria-expanded="true"). */
+  .navbar__menu {
+    display: none;
+    flex-basis: 100%;
+    padding-block-end: var(--space-md);
+  }
+
+  .navbar__menu.is-open {
+    display: block;
+  }
+
+  .navbar__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .navbar__link {
+    display: block;
+    padding-block: var(--space-sm);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: color var(--transition-fast) var(--ease-standard);
+  }
+
+  .navbar__link:hover,
+  .navbar__link[aria-current="page"] {
+    color: var(--color-primary);
+  }
+}

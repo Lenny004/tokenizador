@@ -75,7 +75,7 @@ export class Controller {
     if (port && port.port === 'out' && e.button === 0) {
       this.mode = 'connect';
       this.connectFrom = port.node;
-      this.canvas.classList.add('connecting');
+      this.canvas.classList.add('is-connecting');
       this.canvas.setPointerCapture(e.pointerId);
       this.renderer.setOverlay({ type:'connect', fromId: port.node.id, sx:p.x, sy:p.y, valid:false });
       return;
@@ -90,7 +90,7 @@ export class Controller {
       // Guarda la posición inicial; el movimiento se calcula como diferencia desde aquí.
       this._pendingDrag = { node, wx, wy, ox: node.x, oy: node.y };
       this.canvas.setPointerCapture(e.pointerId);
-      this.canvas.classList.add('grabbing');
+      this.canvas.classList.add('is-grabbing');
       return;
     }
 
@@ -105,7 +105,7 @@ export class Controller {
       this.mode = 'pan';
       this.panStart = { x: p.x, y: p.y, cx: this.app.camera.x, cy: this.app.camera.y };
       this.canvas.setPointerCapture(e.pointerId);
-      this.canvas.classList.add('grabbing');
+      this.canvas.classList.add('is-grabbing');
     }
   }
 
@@ -216,7 +216,7 @@ export class Controller {
     this.mode = 'idle';
     this._pendingDrag = null;
     this.panStart = null;
-    this.canvas.classList.remove('grabbing', 'connecting');
+    this.canvas.classList.remove('is-grabbing', 'is-connecting');
     // Puede no haber captura activa (p. ej. tras pointercancel); se ignora.
     try { this.canvas.releasePointerCapture(e.pointerId); } catch (_) {}
   }
@@ -310,30 +310,30 @@ export class Inspector {
 
       h.innerHTML = `
         <p class="panel-title">Caja · ${n.type}</p>
-        <div class="badge-row">
-          <span class="badge ok">IN ${inDeg}</span>
-          <span class="badge ok">OUT ${outDeg}</span>
+        <div class="badge-list">
+          <span class="badge badge--ok">IN ${inDeg}</span>
+          <span class="badge badge--ok">OUT ${outDeg}</span>
           <span class="badge">${preset.desc}</span>
         </div>
 
         <div class="field">
-          <label>Salida de la estación</label>
-          <pre class="salida-estacion" data-out="salida"></pre>
+          <label class="field__label">Salida de la estación</label>
+          <pre class="station-output" data-out="salida"></pre>
         </div>
 
         <div class="field">
-          <label>ID único de evento</label>
-          <input type="text" readonly value="${n.eventId}" />
+          <label class="field__label">ID único de evento</label>
+          <input class="field__control" type="text" readonly value="${n.eventId}" />
         </div>
 
         <div class="field">
-          <label>Etiqueta</label>
-          <input type="text" data-field="label" value="${escapeHtml(n.label)}" maxlength="42" />
+          <label class="field__label">Etiqueta</label>
+          <input class="field__control" type="text" data-field="label" value="${escapeHtml(n.label)}" maxlength="42" />
         </div>
 
         <div class="field">
-          <label>Tipo de neurona</label>
-          <select data-field="type">
+          <label class="field__label">Tipo de neurona</label>
+          <select class="field__control" data-field="type">
             ${Object.entries(NODE_TYPES).map(([k, v]) =>
               `<option value="${k}" ${k === n.type ? 'selected' : ''}>${v.icon} ${v.label} · umbral ${v.threshold}</option>`
             ).join('')}
@@ -341,21 +341,21 @@ export class Inspector {
         </div>
 
         <div class="field">
-          <label>Umbral de disparo · <span data-out="threshold">${n.threshold}</span></label>
-          <input type="range" min="0" max="4" step="1" data-field="threshold" value="${n.threshold}" />
+          <label class="field__label">Umbral de disparo · <span data-out="threshold">${n.threshold}</span></label>
+          <input class="field__control field__range" type="range" min="0" max="4" step="1" data-field="threshold" value="${n.threshold}" />
         </div>
 
         <div class="field">
-          <label>Peso sináptico · <span data-out="weight">${n.weight.toFixed(1)}</span></label>
-          <input type="range" min="0.2" max="3" step="0.1" data-field="weight" value="${n.weight}" />
+          <label class="field__label">Peso sináptico · <span data-out="weight">${n.weight.toFixed(1)}</span></label>
+          <input class="field__control field__range" type="range" min="0.2" max="3" step="0.1" data-field="weight" value="${n.weight}" />
         </div>
 
         <div class="field">
-          <label>Posición</label>
-          <input type="text" readonly value="x:${Math.round(n.x)}  y:${Math.round(n.y)}" />
+          <label class="field__label">Posición</label>
+          <input class="field__control" type="text" readonly value="x:${Math.round(n.x)}  y:${Math.round(n.y)}" />
         </div>
 
-        <button class="danger-btn" data-action="delete-node">🗑 Eliminar caja</button>
+        <button class="danger-button" data-action="delete-node">🗑 Eliminar caja</button>
       `;
       this._paintOutput(n);
       this._wireNode(n);
@@ -370,23 +370,23 @@ export class Inspector {
 
       h.innerHTML = `
         <p class="panel-title">Conexión sináptica</p>
-        <div class="badge-row">
+        <div class="badge-list">
           <span class="badge">${a ? a.icon + ' ' + escapeHtml(a.label) : '?'}</span>
-          <span class="badge ok">→</span>
+          <span class="badge badge--ok">→</span>
           <span class="badge">${b ? b.icon + ' ' + escapeHtml(b.label) : '?'}</span>
         </div>
 
         <div class="field">
-          <label>ID de arista</label>
+          <label class="field__label">ID de arista</label>
           <input type="text" readonly value="${e.id}" />
         </div>
 
         <div class="field">
-          <label>Peso sináptico · <span data-out="w">${e.weight.toFixed(1)}</span></label>
-          <input type="range" min="0.2" max="3" step="0.1" data-field="weight" value="${e.weight}" />
+          <label class="field__label">Peso sináptico · <span data-out="w">${e.weight.toFixed(1)}</span></label>
+          <input class="field__control field__range" type="range" min="0.2" max="3" step="0.1" data-field="weight" value="${e.weight}" />
         </div>
 
-        <button class="danger-btn" data-action="delete-edge">🗑 Eliminar conexión</button>
+        <button class="danger-button" data-action="delete-edge">🗑 Eliminar conexión</button>
       `;
 
       const range = h.querySelector('input[data-field="weight"]');
@@ -407,8 +407,8 @@ export class Inspector {
   _paintOutput(n) {
     const pre = this.host.querySelector('[data-out="salida"]');
     if (!pre) return;
-    pre.classList.toggle('pendiente', !!ESTACIONES[n.type]?.pendiente);
-    pre.classList.toggle('error', !!n.error);
+    pre.classList.toggle('is-pending', !!ESTACIONES[n.type]?.pendiente);
+    pre.classList.toggle('is-error', !!n.error);
     if (n.error) pre.textContent = '⚠ ' + n.error;
     else if (ESTACIONES[n.type]?.pendiente) {
       pre.textContent = 'en desarrollo\n— el dato pasa sin cambios —\n\n' + detalle(n.salida);
@@ -492,11 +492,11 @@ export class ToastManager {
    */
   push(msg, kind = '') {
     const el = document.createElement('div');
-    el.className = `toast ${kind}`;
+    el.className = kind ? `toast toast--${kind}` : 'toast';
     el.textContent = msg;
     this.host.appendChild(el);
     setTimeout(() => {
-      el.classList.add('out');
+    el.classList.add('is-out');
       setTimeout(() => el.remove(), 240);
     }, 2400);
   }

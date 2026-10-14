@@ -6,48 +6,46 @@
   <title>Tokenizador Ternario</title>
   <link rel="stylesheet" href="css/estilos.css">
 </head>
-<body>
-  <h1>Tokenizador Ternario</h1>
-  <p><a href="simulador.html">Ver la línea de producción en el simulador visual →</a></p>
+<body class="board-page" data-theme="light">
+  <h1 class="board-page__title">Tokenizador Ternario</h1>
+  <p><a class="board-page__link" href="simulador.html">Ver la línea de producción en el simulador visual →</a></p>
 
-  <!-- Línea de producción: cada div es una estación del tablero -->
   <main class="pipeline">
-    <div class="estacion uno"    id="texto-natural">
-      <h2>Texto natural</h2>
-      <textarea id="entrada" rows="4" placeholder="Escribe una frase...">¡QUIERO   Pupusas de Queso, por favor!!</textarea>
+    <div class="pipeline__station" id="texto-natural">
+      <h2 class="pipeline__title">Texto natural</h2>
+      <textarea class="pipeline__input" id="entrada" rows="4" placeholder="Escribe una frase...">¡QUIERO   Pupusas de Queso, por favor!!</textarea>
     </div>
-    <div class="estacion dos"    id="normalizar">
-      <h2>Normalizar</h2>
-      <p class="resultado"></p>
+    <div class="pipeline__station" id="normalizar">
+      <h2 class="pipeline__title">Normalizar</h2>
+      <p class="output"></p>
     </div>
-    <div class="estacion tres"   id="tokenizador">
-      <h2>Tokenizador ternario</h2>
-      <ul class="resultado"></ul>
+    <div class="pipeline__station" id="tokenizador">
+      <h2 class="pipeline__title">Tokenizador ternario</h2>
+      <ul class="output output--list output--plain"></ul>
     </div>
-    <div class="estacion cuatro" id="codificador">
-      <h2>Codificador</h2>
-      <ul class="resultado"></ul>
+    <div class="pipeline__station" id="codificador">
+      <h2 class="pipeline__title">Codificador</h2>
+      <ul class="output output--list"></ul>
     </div>
-    <div class="estacion cinco"  id="ternario-liquido">
-      <h2>Ternario líquido</h2>
-      <p class="resultado"></p>
+    <div class="pipeline__station" id="ternario-liquido">
+      <h2 class="pipeline__title">Ternario líquido</h2>
+      <p class="output"></p>
     </div>
-    <div class="estacion seis"   id="prediccion">
-      <h2>Predicción estocástica</h2>
-      <label>Temperatura: <output id="valor-temperatura">0.7</output>
-        <input id="temperatura" type="range" min="0.1" max="2" step="0.1" value="0.7">
+    <div class="pipeline__station" id="prediccion">
+      <h2 class="pipeline__title">Predicción estocástica</h2>
+      <label class="pipeline__control">Temperatura: <output id="valor-temperatura">0.7</output>
+        <input class="pipeline__input" id="temperatura" type="range" min="0.1" max="2" step="0.1" value="0.7">
       </label>
-      <ol class="resultado busqueda"></ol>
-      <p class="resultado texto-generado"></p>
-      <ol class="resultado pasos"></ol>
+      <ol class="output output--list output--search"></ol>
+      <p class="output output--generated"></p>
+      <ol class="output output--list output--steps"></ol>
     </div>
   </main>
 
-  <!-- Panel de salida: texto y código -->
-  <section class="salida">
-    <div id="salida-texto"><h2>Texto</h2><p class="resultado"></p></div>
-    <div id="salida-codigo"><h2>Código</h2><pre class="resultado"><code></code></pre></div>
-    <div id="errores-js"><h2>Descubrir error de lógica en JS</h2></div>
+  <section class="result-panels">
+    <div class="result-panels__panel" id="salida-texto"><h2 class="result-panels__title">Texto</h2><p class="output"></p></div>
+    <div class="result-panels__panel result-panels__panel--code" id="salida-codigo"><h2 class="result-panels__title">Código</h2><pre class="output output--code"><code class="output__code"></code></pre></div>
+    <div class="result-panels__panel" id="errores-js"><h2 class="result-panels__title">Descubrir error de lógica en JS</h2></div>
   </section>
 
   <script type="module" src="js/main.js"></script>

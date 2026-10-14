@@ -1,0 +1,10 @@
+/*
+ * styles.css: hoja global de Angular (declarada en angular.json). Solo capas e imports.
+ * Los estilos de componente (encapsulados) no llevan capa y ganan a estas: es lo deseado.
+ */
+@layer reset, tokens, base, utilities;
+
+@import url("styles/reset.css");
+@import url("styles/tokens.css");
+@import url("styles/base.css");
+@import url("styles/utilities.css");

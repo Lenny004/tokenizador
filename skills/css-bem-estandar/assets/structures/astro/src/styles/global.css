@@ -1,0 +1,11 @@
+/*
+ * global.css: único punto de entrada global. Se importa UNA vez en Layout.astro.
+ * Solo capas e imports; los componentes llevan su <style> scoped.
+ * themes.css va después de tokens.css porque redefine sus tokens semánticos.
+ */
+@layer reset, tokens, base, components, utilities;
+
+@import url("./reset.css");
+@import url("./tokens.css");
+@import url("./themes.css");
+@import url("./base.css");

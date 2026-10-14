@@ -1,0 +1,13 @@
+/*
+ * utilities.css: pocas utilidades de una sola responsabilidad, en la capa más alta.
+ */
+@layer utilities {
+  .container {
+    inline-size: min(100% - 2 * var(--container-padding), var(--container-max));
+    margin-inline: auto;
+  }
+
+  .text-center {
+    text-align: center;
+  }
+}

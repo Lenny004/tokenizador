@@ -1,0 +1,73 @@
+/*
+ * reset.css: reset moderno y mínimo. Se carga una sola vez, en la capa más baja.
+ * :where() deja la especificidad en 0 para que cualquier regla lo sobrescriba.
+ */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  html {
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-block-size: 100dvh;
+  }
+
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  img,
+  video {
+    block-size: auto;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :where(textarea:not([rows])) {
+    min-block-size: 10em;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    overflow-wrap: break-word;
+  }
+
+  /* Las listas con role="list" pierden los estilos pero conservan la semántica. */
+  :where(ul, ol)[role="list"] {
+    padding: 0;
+    list-style: none;
+  }
+
+  :where([hidden]:not([hidden="until-found"])) {
+    display: none;
+  }
+}

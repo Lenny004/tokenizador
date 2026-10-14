@@ -1,0 +1,10 @@
+/*
+ * globals.css: tokens + reset + base, importado UNA vez en app/layout.tsx.
+ * Los estilos de cada componente viven en su Componente.module.css.
+ * Los módulos sin capa ganan a estas capas: es lo deseado (el componente manda).
+ */
+@layer reset, tokens, base;
+
+@import url("../styles/reset.css");
+@import url("../styles/tokens.css");
+@import url("../styles/base.css");

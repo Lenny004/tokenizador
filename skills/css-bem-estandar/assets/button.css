@@ -1,0 +1,99 @@
+/*
+ * Bloque btn: botón y enlace con aspecto de botón.
+ * Uso: class="btn btn--secondary"; icono con class="btn__icon".
+ * Los modificadores solo cambian variables locales (--btn-*); nunca repiten reglas.
+ */
+@layer components {
+  .btn {
+    --btn-bg: var(--color-primary);
+    --btn-bg-hover: var(--color-primary-hover);
+    --btn-color: var(--color-on-primary);
+    --btn-border-color: transparent;
+    --btn-padding-block: var(--space-sm);
+    --btn-padding-inline: var(--space-md);
+    --btn-font-size: var(--font-size-sm);
+
+    display: inline-flex;
+    gap: var(--space-xs);
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tap-target-min);
+    padding-block: var(--btn-padding-block);
+    padding-inline: var(--btn-padding-inline);
+
+    /* Borde transparente: en modo de alto contraste (forced-colors) se vuelve visible. */
+    border: var(--border-width) solid var(--btn-border-color);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--btn-font-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-tight);
+    color: var(--btn-color);
+    text-decoration: none;
+    cursor: pointer;
+    background-color: var(--btn-bg);
+    transition:
+      background-color var(--transition-fast) var(--ease-standard),
+      color var(--transition-fast) var(--ease-standard),
+      transform var(--transition-fast) var(--ease-standard);
+  }
+
+  /* :focus-visible lo aporta base.css de forma global para todos los controles. */
+  .btn:hover {
+    background-color: var(--btn-bg-hover);
+  }
+
+  .btn:active {
+    transform: translateY(0.1rem);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    --btn-bg-hover: var(--btn-bg);
+
+    cursor: not-allowed;
+    opacity: var(--opacity-disabled);
+    transform: none;
+  }
+
+  .btn__icon {
+    flex-shrink: 0;
+    inline-size: var(--icon-size-sm);
+    block-size: var(--icon-size-sm);
+  }
+
+  .btn--secondary {
+    --btn-bg: var(--color-secondary);
+    --btn-bg-hover: var(--color-secondary-hover);
+    --btn-color: var(--color-on-secondary);
+  }
+
+  .btn--ghost {
+    --btn-bg: transparent;
+    --btn-bg-hover: var(--color-bg);
+    --btn-color: var(--color-text);
+    --btn-border-color: var(--color-border);
+  }
+
+  .btn--danger {
+    --btn-bg: var(--color-danger);
+    --btn-bg-hover: var(--color-danger);
+    --btn-color: var(--color-on-primary);
+  }
+
+  .btn--sm {
+    --btn-padding-block: var(--space-xs);
+    --btn-padding-inline: var(--space-sm);
+    --btn-font-size: var(--font-size-xs);
+  }
+
+  .btn--lg {
+    --btn-padding-block: var(--space-md);
+    --btn-padding-inline: var(--space-lg);
+    --btn-font-size: var(--font-size-md);
+  }
+
+  .btn--block {
+    inline-size: 100%;
+  }
+}

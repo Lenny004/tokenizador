@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inicio</title>
+    <!-- El orden de carga fija el orden de capas: reset, tokens, base, components. -->
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/tablet.css">
+    <link rel="stylesheet" href="css/desktop.css">
+  </head>
+  <body>
+    <header class="navbar">
+      <a class="navbar__brand" href="/">Marca</a>
+      <button class="navbar__toggle js-navbar-toggle" type="button" aria-expanded="false" aria-controls="main-menu">
+        <span class="sr-only">Abrir menú</span>
+        <svg class="navbar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
+      <nav class="navbar__menu" id="main-menu" aria-label="Principal">
+        <ul class="navbar__list" role="list">
+          <li><a class="navbar__link" href="/" aria-current="page">Inicio</a></li>
+          <li><a class="navbar__link" href="/servicios">Servicios</a></li>
+          <li><a class="navbar__link" href="/contacto">Contacto</a></li>
+        </ul>
+      </nav>
+    </header>
+    <script>
+      // js-navbar-toggle es solo un hook: el estilo depende de is-open y aria-expanded.
+      const toggle = document.querySelector('.js-navbar-toggle');
+      const menu = document.getElementById(toggle.getAttribute('aria-controls'));
+      toggle.addEventListener('click', () => {
+        const open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!open));
+        menu.classList.toggle('is-open', !open);
+      });
+    </script>
+  </body>
+</html>

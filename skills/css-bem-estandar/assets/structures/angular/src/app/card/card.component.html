@@ -1,0 +1,13 @@
+@if (image()) {
+  <img class="card__media" [src]="image()" [alt]="alt()" loading="lazy" />
+}
+<div class="card__body">
+  <h3 class="card__title">{{ title() }}</h3>
+  @if (text()) {
+    <p class="card__text">{{ text() }}</p>
+  }
+  @if (price()) {
+    <p class="card__price">{{ price() }}</p>
+  }
+  <ng-content />
+</div>

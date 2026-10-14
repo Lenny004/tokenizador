@@ -3,8 +3,9 @@ import { normalizar } from "./normalizar.js";
 import { tokenizar } from "./tokenizador.js";
 import { codificar } from "./codificador.js";
 import { licuar, rasgoMasFuerte } from "./liquido.js";
-import { crearRed, entrenar, predecir } from "./red.js";
-import { ENTRENAMIENTO } from "../data/ejemplos.js";
+import { crearRed, entrenar } from "./red.js";
+import { construirBase, contestar } from "./vectores.js";
+import { ENTRENAMIENTO, PREGUNTAS, RESPUESTAS } from "../data/ejemplos.js";
 
 // Se lee #entrada; se escribe en el .resultado de cada estación.
 const entrada = document.querySelector("#entrada");
@@ -16,10 +17,15 @@ const temperatura = document.querySelector("#temperatura");
 const valorTemperatura = document.querySelector("#valor-temperatura");
 const salidaTexto = document.querySelector("#prediccion .texto-generado");
 const salidaPasos = document.querySelector("#prediccion .pasos");
+const salidaBusqueda = document.querySelector("#prediccion .busqueda");
+const panelTexto = document.querySelector("#salida-texto .resultado");
+const panelCodigo = document.querySelector("#salida-codigo code");
 
 // Estación 6: la red se entrena una sola vez al cargar (semilla fija, siempre igual).
 const red = crearRed(7);
 entrenar(red, ENTRENAMIENTO);
+// Base vectorial: los vectores de las frases de ejemplo se calculan una vez.
+const base = construirBase({ preguntas: PREGUNTAS, respuestas: RESPUESTAS });
 
 /** Procesa `#entrada` por las estaciones 2 a 6 y repinta los resultados. */
 function procesar() {
@@ -53,13 +59,29 @@ function procesar() {
     `${mezcla.estado}: ${mezcla.nota}\n` +
     `Rasgo más fuerte: ${fuerte.rasgo} (${fuerte.valor})`;
 
-  // Estación 6: texto generado y, por paso, las 3 palabras más probables.
+  // Estación 6: primero la base vectorial; si no entiende, responde la red.
   const T = Number(temperatura.value);
   valorTemperatura.textContent = T.toFixed(1);
-  const prediccion = predecir(red, mezcla, { temperatura: T });
-  salidaTexto.textContent = prediccion.texto || "(sin respuesta)";
+  const respuesta = contestar(base, red, entrada.value, mezcla, { temperatura: T });
+
+  // Las 3 frases de ejemplo más parecidas, con su similitud.
+  salidaBusqueda.replaceChildren();
+  for (const c of respuesta.busqueda.coincidencias) {
+    const fila = document.createElement("li");
+    fila.textContent = `${(c.similitud * 100).toFixed(1)}% · ${c.intencion} · "${c.frase}"`;
+    salidaBusqueda.appendChild(fila);
+  }
+  salidaTexto.textContent = respuesta.fuente === "vectores"
+    ? `Base vectorial (${respuesta.busqueda.intencion}): ${respuesta.tipo === "codigo" ? "ver Código" : respuesta.texto}`
+    : `Red neuronal: ${respuesta.texto}`;
+
+  // Panel de salida: el texto o el código, según el tipo de respuesta.
+  panelTexto.textContent = respuesta.tipo === "texto" ? respuesta.texto : "";
+  panelCodigo.textContent = respuesta.tipo === "codigo" ? respuesta.texto : "";
+
+  // Pasos de la red (vacío si respondió la base vectorial).
   salidaPasos.replaceChildren();
-  for (const paso of prediccion.pasos) {
+  for (const paso of respuesta.pasos) {
     const fila = document.createElement("li");
     fila.textContent = `${paso.token} · ` + paso.top3.map((o) => `${o.token} ${(o.probabilidad * 100).toFixed(1)}%`).join(", ");
     salidaPasos.appendChild(fila);

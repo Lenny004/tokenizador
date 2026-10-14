@@ -1,4 +1,4 @@
-// Datos de entrenamiento de la red (estación 6); copia exacta de "entrenamiento" en ejemplos.json.
+// Datos del proyecto; copia exacta de ejemplos.json ("entrenamiento", "preguntas" y "respuestas").
 // Se usa un módulo JS porque el navegador no importa JSON de forma fiable sin servidor especial.
 
 /** @type {Array<{frase: string, respuesta: string}>} */
@@ -8,4 +8,132 @@ export const ENTRENAMIENTO = [
   { frase: "pupusas", respuesta: "revueltas chicharron <fin>" },
   { frase: "queso", respuesta: "frijol queso <fin>" },
   { frase: "por favor", respuesta: "listo <fin>" },
+];
+
+/**
+ * Base vectorial: 10 formas de preguntar cada intención.
+ * @type {Array<{intencion: string, frases: Array<string>}>}
+ */
+export const PREGUNTAS = [
+  {
+    "intencion": "pupusas",
+    "frases": [
+      "Quiero pupusas de queso",
+      "Me da unas pupusas por favor",
+      "Quiero dos pupusas revueltas",
+      "¿Me vende pupusas de frijol?",
+      "Deme pupusas con curtido",
+      "Quisiera ordenar pupusas",
+      "Una orden de pupusas de queso por favor",
+      "¿Tiene pupusas de chicharrón?",
+      "Quiero pedir pupusas para llevar",
+      "Pupusas de queso con loroco, por favor"
+    ]
+  },
+  {
+    "intencion": "saludo",
+    "frases": [
+      "Hola",
+      "Buenos días",
+      "Buenas tardes",
+      "Buenas noches",
+      "Hola, ¿cómo estás?",
+      "¿Qué tal?",
+      "Saludos",
+      "Hola, buen día",
+      "¿Cómo te va?",
+      "Hola, ¿qué onda?"
+    ]
+  },
+  {
+    "intencion": "html",
+    "frases": [
+      "Diséñame una web html",
+      "Hazme una página web",
+      "Crea una página en HTML",
+      "Necesito el código html de una web",
+      "Quiero una página web sencilla",
+      "Escribe una página html con un título",
+      "Diseña un sitio web en html",
+      "Dame el código de una página",
+      "Genera una web con html",
+      "Haz una página html básica"
+    ]
+  },
+  {
+    "intencion": "bebida",
+    "frases": [
+      "Quiero un café",
+      "Me da un café con leche",
+      "¿Tiene horchata?",
+      "Quiero algo de tomar",
+      "Deme una bebida fría",
+      "Un chocolate caliente por favor",
+      "¿Qué bebidas tiene?",
+      "Quiero un fresco de ensalada",
+      "Me regala un café negro",
+      "Una horchata grande por favor"
+    ]
+  }
+];
+
+/**
+ * Respuestas por intención; `tipo` es "texto" o "codigo".
+ * @type {Array<{intencion: string, id: string, tipo: "texto"|"codigo", texto: string}>}
+ */
+export const RESPUESTAS = [
+  {
+    "intencion": "pupusas",
+    "id": "pupusas1",
+    "tipo": "texto",
+    "texto": "¡Claro! Sus pupusas van con curtido y salsa."
+  },
+  {
+    "intencion": "pupusas",
+    "id": "pupusas2",
+    "tipo": "texto",
+    "texto": "Con gusto, ¿de queso, frijol o revueltas?"
+  },
+  {
+    "intencion": "saludo",
+    "id": "saludo1",
+    "tipo": "texto",
+    "texto": "¡Hola! ¿En qué le puedo ayudar?"
+  },
+  {
+    "intencion": "saludo",
+    "id": "saludo2",
+    "tipo": "texto",
+    "texto": "¡Buenas! Bienvenido."
+  },
+  {
+    "intencion": "html",
+    "id": "html1",
+    "tipo": "codigo",
+    "texto": "<!DOCTYPE html>\n<html lang=\"es\">\n<head><title>Mi web</title></head>\n<body><h1>Hola</h1></body>\n</html>"
+  },
+  {
+    "intencion": "html",
+    "id": "html2",
+    "tipo": "codigo",
+    "texto": "<main>\n  <h1>Mi página</h1>\n  <p>Bienvenido.</p>\n</main>"
+  },
+  {
+    "intencion": "html",
+    "id": "html3",
+    "tipo": "codigo",
+    "texto": "<a href=\"#\">Inicio</a> | <a href=\"#\">Contacto</a>"
+  },
+  {
+    "intencion": "bebida",
+    "id": "bebida1",
+    "tipo": "texto",
+    "texto": "Tenemos café, horchata y chocolate."
+  },
+  {
+    "intencion": "bebida",
+    "id": "bebida2",
+    "tipo": "texto",
+    "texto": "Enseguida le traigo su bebida."
+  }
 ];

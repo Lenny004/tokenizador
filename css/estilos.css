@@ -12,4 +12,6 @@ textarea { width: 100%; box-sizing: border-box; font: inherit; resize: vertical;
 #tokenizador .resultado { list-style: none; margin: 0; }
 #prediccion label { display: block; margin-bottom: .5rem; }
 #prediccion input[type=range] { width: 100%; }
+#prediccion .busqueda { margin: 0 0 .5rem; padding-left: 1.8rem; font-size: .85rem; }
+#salida-codigo pre { white-space: pre-wrap; margin: 0; }
 #prediccion .pasos { margin: .5rem 0 0; padding-left: 1.8rem; font-size: .85rem; }

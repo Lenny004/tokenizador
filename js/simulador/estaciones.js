@@ -3,12 +3,15 @@ import { normalizar } from '../normalizar.js';
 import { tokenizar } from '../tokenizador.js';
 import { codificar } from '../codificador.js';
 import { licuar, rasgoMasFuerte } from '../liquido.js';
-import { crearRed, entrenar, predecir } from '../red.js';
-import { ENTRENAMIENTO } from '../../data/ejemplos.js';
+import { crearRed, entrenar } from '../red.js';
+import { construirBase, contestar } from '../vectores.js';
+import { ENTRENAMIENTO, PREGUNTAS, RESPUESTAS } from '../../data/ejemplos.js';
 
 // Red de la estación 6: se entrena una vez al importar el módulo (semilla fija).
 const red = crearRed(7);
 entrenar(red, ENTRENAMIENTO);
+// Base vectorial de la estación 6 (vectores de las frases de ejemplo).
+const base = construirBase({ preguntas: PREGUNTAS, respuestas: RESPUESTAS });
 
 /** Opciones de la predicción; `app.js` cambia `temperatura` con el control de la barra. */
 export const OPCIONES_RED = { temperatura: 0.7 };
@@ -45,9 +48,10 @@ export const ESTACIONES = {
     pendiente: false,
   },
   prediccion: {
-    procesar: (mezcla) => {
+    // Usa la base vectorial con el texto original; si no entiende, genera con la red.
+    procesar: (mezcla, entradaUsuario) => {
       if (!esMezcla(mezcla)) throw new Error('La predicción necesita la mezcla (¿está conectada después del Ternario líquido?)');
-      return predecir(red, mezcla, { temperatura: OPCIONES_RED.temperatura });
+      return contestar(base, red, entradaUsuario, mezcla, { temperatura: OPCIONES_RED.temperatura });
     },
     pendiente: false,
   },
@@ -120,10 +124,15 @@ export function detalle(dato) {
            `más fuerte ${fuerte.rasgo} (${fuerte.valor})`;
   }
   if (esPrediccion(dato)) {
+    // Fuente de la respuesta y top 3 de la base vectorial, si existe.
+    const busqueda = dato.busqueda
+      ? `fuente: ${dato.fuente}${dato.tipo === 'codigo' ? ' (código)' : ''}\n` +
+        dato.busqueda.coincidencias.map((c) => `${(c.similitud * 100).toFixed(1).padStart(5)}% ${c.intencion.padEnd(8)} "${c.frase}"`).join('\n') + '\n\n'
+      : '';
     // Una línea por paso: palabra elegida y las 3 más probables.
     const pasos = dato.pasos.map((p, i) =>
       `${i + 1}. ${p.token.padEnd(10)} ` + p.top3.map((o) => `${o.token} ${(o.probabilidad * 100).toFixed(1)}%`).join(', '));
-    return `"${dato.texto}"\n\n` + pasos.join('\n');
+    return busqueda + `"${dato.texto}"` + (pasos.length ? '\n\n' + pasos.join('\n') : '');
   }
   return JSON.stringify(dato, null, 2);
 }

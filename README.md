@@ -14,6 +14,7 @@
 - **Pensado para el español**: conserva la ñ ("año" no es "ano") y une palabras con y sin tilde o diéresis ("pingüino" = "pinguino").
 - **Palabras vacías ordenadas por tipo**: artículos, preposiciones, conjunciones, contracciones, pronombres y demostrativos tienen cada uno su arreglo.
 - **Una red neuronal que se entiende**: una sola capa lineal con softmax y temperatura genera la respuesta palabra por palabra, y muestra las 3 opciones más probables de cada paso.
+- **Base de datos vectorial**: 4 intenciones con 10 formas de preguntar cada una; la frase se compara por similitud coseno y, si no se parece a nada, responde la red neuronal.
 - **Sin instalar nada**: HTML, CSS y JavaScript puro, sin dependencias.
 
 <!-- section:overview -->
@@ -43,7 +44,7 @@ Como el proyecto usa módulos de JavaScript (`import`), hay que abrirlo con un s
 1. Abre `index.html` con Live Server.
 2. Escribe una frase en **Texto natural**.
 
-Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno). La **Predicción estocástica** responde `con curtido y salsa` (con temperatura 0.7, el primer paso elige "con" con 97.4 %). Con la frase por defecto del tablero ("…por favor!!") la red elige `<fin>` de inmediato y no genera texto: no tiene ejemplos de entrenamiento parecidos.
+Resultado esperado: con "¡QUIERO Pupusas de Queso y de frijol!", la estación **Normalizar** muestra `quiero pupusas de queso y de frijol`, el **Tokenizador** muestra cada palabra con su ID y su vector, y el **Codificador** da `de → 0.2 (palabra vacía: preposición)` y al segundo `de` le da 0.1, porque además está repetido. El **Ternario líquido** mezcla todo en `[0.22, -0.44, 0.67]` (estado `ok`, rasgo más fuerte: desayuno). La **Predicción estocástica** busca primero en la base vectorial: la frase se parece en un 86.4 % a "Quiero pupusas de queso" y responde `¡Claro! Sus pupusas van con curtido y salsa.` en el panel **Texto**. Con "Diséñame una web html" la respuesta es código HTML y aparece en el panel **Código**. Si la frase no se parece a ningún ejemplo (similitud menor que 0.4), responde la red neuronal palabra por palabra; por ejemplo, "quiero pupusas de queso" sola, sin la base, da `con curtido y salsa`.
 
 La barra **Temperatura** (0.1 a 2) de la estación 6 cambia qué tan arriesgada es la respuesta: baja = siempre la palabra más probable, alta = más variedad.
 
@@ -66,15 +67,16 @@ Desde `index.html` hay un enlace a `simulador.html`: escribe la frase arriba, pu
 │   ├── codificador.js      # estación 4: pesos, palabras vacías por tipo y repetidas
 │   ├── liquido.js          # estación 5: licúa los vectores ponderados en uno solo (promedio ponderado)
 │   ├── red.js              # estación 6: red lineal + softmax, entrenamiento y predicción token a token
-│   ├── vectores.js         # base de datos vectorial: pendiente
+│   ├── vectores.js         # base de datos vectorial: bolsa de palabras con pesos, similitud coseno y respaldo con la red
 │   ├── simulador.js        # arranca el simulador
 │   └── simulador/          # núcleo (EventBus), grafo, motor, dibujo, interfaz, app y registro de estaciones
 ├── data/
-│   ├── ejemplos.json       # preguntas y respuestas de ejemplo; "entrenamiento" tiene los pares de la red
-│   └── ejemplos.js         # los mismos pares como módulo JS (el navegador lo importa sin fetch)
+│   ├── ejemplos.json       # "preguntas" (10 formas por intención), "respuestas" (texto o código) y "entrenamiento" (pares de la red)
+│   └── ejemplos.js         # copia de ejemplos.json como módulo JS (el navegador lo importa sin fetch)
 ├── pruebas/
 │   ├── pesos-aprendidos.js # muestra por qué el codificador castiga palabras vacías
 │   ├── liquido.js          # prueba la estación 5 con frases normales, vacías y sin significado
+│   ├── vectores.js         # prueba la base vectorial: búsqueda, paráfrasis, umbral y respaldo
 │   └── red.js              # prueba softmax, temperatura, entrenamiento y predicción de la estación 6
 └── skills/                 # guías de documentación del proyecto: README y JSDoc
 ```
@@ -98,6 +100,7 @@ Requiere [Node.js](https://nodejs.org/) para correrlas desde la terminal:
 node pruebas/pesos-aprendidos.js
 node pruebas/liquido.js
 node pruebas/red.js
+node pruebas/vectores.js
 ```
 
 `pesos-aprendidos.js` simula vectores ya aprendidos por la red y compara "de" y "pupusas" sin castigo y con el codificador: "de" pasa de `[0.3, -0.1, 0.4]` a `[0.06, -0.02, 0.08]`.
@@ -105,6 +108,8 @@ node pruebas/red.js
 `liquido.js` revisa la estación 5: "quiero pupusas de queso" da `[0.31, -0.31, 0.63]` (ok, rasgo más fuerte: desayuno), "de y de" da `[0, 0, 0]` (sin significado) y una frase vacía da `[0, 0, 0]` (vacío), sin `NaN`.
 
 `red.js` revisa la estación 6: que `ejemplos.js` y `ejemplos.json` tengan los mismos pares, que softmax sume 1, que con temperatura 0.1 la opción más probable pase de 0.95, que la pérdida baje al entrenar (de 2.803 a 0.069) y que "quiero pupusas de queso" responda `con curtido y salsa`.
+
+`vectores.js` revisa la base vectorial: que `ejemplos.js` y `ejemplos.json` coincidan, que cada una de las 40 frases encuentre su propia intención, que "hazme una página en html" (frase nueva) llegue a html con 67.5 %, que "asdf qwer zxcv" quede bajo el umbral y que la frase del tablero reciba una respuesta real.
 
 <!-- section:roadmap -->
 ## 🗺️ Hoja de ruta y estado
@@ -115,7 +120,7 @@ node pruebas/red.js
 - [x] Simulador visual conectado a las estaciones
 - [x] Estación 5: ternario líquido
 - [x] Estación 6: red neuronal con softmax, temperatura y predicción token a token
-- [ ] Base de datos vectorial (10 formas de cada pregunta y de cada respuesta)
+- [x] Base de datos vectorial (10 formas de cada pregunta y de cada respuesta)
 - [ ] Salida de texto y código, y detector de errores de lógica en JS
 
 <!-- section:contributing -->
